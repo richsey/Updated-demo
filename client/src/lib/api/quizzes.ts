@@ -12,7 +12,7 @@ async function fetchQuestionsForQuiz(quizId: string) {
   const { data, error } = await supabase
     .from("questions")
     .select("*")
-    .eq("quizzes_id", quizId);
+    .eq("quiz_id", quizId);
 
   if (error) {
     console.warn("[Quizzes] Could not load questions for quiz", quizId, error.message);
@@ -26,7 +26,7 @@ async function fetchQuestionsForQuizzes(quizIds: string[]) {
   const { data, error } = await supabase
     .from("questions")
     .select("*")
-    .in("quizzes_id", quizIds);
+    .in("quiz_id", quizIds);
 
   if (error) {
     console.warn("[Quizzes] Could not load questions batch:", error.message);
@@ -44,7 +44,7 @@ export async function fetchQuizzes() {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  const quizzes = data ?? [];
+  const quizzes: any[] = data ?? [];
 
   // Attach questions to each quiz
   const questions = await fetchQuestionsForQuizzes(quizzes.map((q) => q.id));
@@ -65,7 +65,7 @@ export async function fetchQuizById(quizId: string) {
   if (!data) return null;
 
   const questions = await fetchQuestionsForQuiz(quizId);
-  return { ...data, questions };
+  return { ...(data as any), questions };
 }
 
 export async function fetchQuizByCourseId(courseId: string) {
@@ -78,8 +78,8 @@ export async function fetchQuizByCourseId(courseId: string) {
   if (error) throw error;
   if (!data) return null;
 
-  const questions = await fetchQuestionsForQuiz(data.id);
-  return { ...data, questions };
+  const questions = await fetchQuestionsForQuiz((data as any).id);
+  return { ...(data as any), questions };
 }
 
 export async function saveQuizAttempt(attempt: {
@@ -121,7 +121,7 @@ export async function fetchUserQuizAttempts(userId: string) {
 
   const quizMap = Object.fromEntries((quizzes ?? []).map((q: any) => [q.id, q]));
 
-  return attempts.map((attempt: any) => ({
+  return (attempts as any[]).map((attempt: any) => ({
     ...attempt,
     quizzes: quizMap[attempt.quiz_id] ?? null,
   }));

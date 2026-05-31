@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client
 import os
+import json
+import time
+import random
 from typing import Any, cast
 from pathlib import Path
 from pydantic import BaseModel
@@ -32,12 +35,25 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+from services.ollama_client import call_ollama, get_ollama_status
+
 @app.get("/")
 def home():
     return {"message": "AI Service Connected to Supabase 🚀"}
 
 
-from services.recommendation_engine import RecommendationEngine
+# ─── Ollama Status ────────────────────────────────────────────────────────────
+
+@app.get("/ollama/status")
+async def ollama_status():
+    """
+    Health-check for the local Ollama instance.
+    Returns running status, current model, and list of available models.
+    """
+    return get_ollama_status()
+
+
+from services.recommendation_engine import RecommendationEngine, build_index as build_rag_index
 from typing import List
 
 class RecommendRequest(BaseModel):
@@ -137,9 +153,6 @@ async def recommend_progress(payload: ProgressRecommendRequest):
 
 # ─── RAG Recommendation Engine ────────────────────────────────────────────────
 
-from services.rag_engine import get_rag_recommendations, build_embeddings
-
-
 class RAGRequest(BaseModel):
     user_id: str
 
@@ -148,14 +161,15 @@ class RAGRequest(BaseModel):
 async def recommend_rag(payload: RAGRequest):
     """
     RAG-powered recommendation endpoint.
-    Uses sentence embeddings + FAISS retrieval + LLM generation
+    Uses sentence-transformers + FAISS retrieval + Ollama/LLM
     to produce personalized, context-aware material recommendations.
 
     Input:  { "user_id": "uuid" }
     Output: { "recommendations": [...], "metadata": {...} }
     """
     try:
-        result = get_rag_recommendations(supabase, payload.user_id)
+        engine = RecommendationEngine(supabase)
+        result = engine.get_rag_recommendations(payload.user_id)
         return result
     except Exception as e:
         return {
@@ -179,16 +193,13 @@ async def rebuild_rag_index():
     Output: { "status": "rebuilt", "material_count": N, "built_at": timestamp }
     """
     try:
-        result = build_embeddings(supabase)
+        result = build_rag_index(supabase)
         return result
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 
 # ─── AI Quiz Generator ────────────────────────────────────────────────────────
-
-import json
-import time
 
 class QuizGenerateRequest(BaseModel):
     course_id: str
@@ -294,18 +305,8 @@ async def generate_quiz(payload: QuizGenerateRequest):
     material_list = ", ".join(m["title"] for m in materials) if materials else "general course content"
     metadata["material_count"] = len(materials)
 
-    # 2. Try LLM generation via Google Gemini (free tier)
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
-    questions = None
-
-    if api_key:
-        try:
-            from google import genai
-            from google.genai import types as genai_types
-
-            client = genai.Client(api_key=api_key)
-
-            prompt = f"""Generate exactly {payload.num_questions} multiple-choice quiz questions for a {payload.difficulty}-level student.
+    # Build the shared quiz prompt (used by both Ollama and Gemini)
+    quiz_prompt = f"""Generate exactly {payload.num_questions} multiple-choice quiz questions for a {payload.difficulty}-level student.
 
 Course: {course['title']}
 Category: {course.get('category', 'General')}
@@ -333,35 +334,62 @@ You MUST respond with ONLY valid JSON in this exact format:
   ]
 }}"""
 
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    system_instruction="You are a quiz generator API. Generate educational multiple-choice questions. Respond with valid JSON only, no markdown code fences.",
-                    temperature=0.8,
-                    max_output_tokens=2000,
-                    response_mime_type="application/json",
-                ),
-            )
+    questions = None
 
-            raw = response.text.strip()
-            # Strip markdown fences if model wraps response anyway
-            if raw.startswith("```"):
-                raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    # 2a. Try Ollama first (local, no API key needed)
+    try:
+        raw = call_ollama(
+            prompt=quiz_prompt,
+            system="You are a quiz generator API. Generate educational multiple-choice questions. Respond with valid JSON only, no markdown code fences.",
+        )
+        if raw:
             parsed = json.loads(raw)
             questions = parsed.get("questions", [])
-            metadata["generation_method"] = "llm_gemini"
+            if questions:
+                metadata["generation_method"] = "llm_ollama"
+                print(f"[QuizGen] Ollama generated {len(questions)} questions")
+            else:
+                questions = None
+    except Exception as e:
+        print(f"[QuizGen] Ollama parse error: {e}")
+        questions = None
 
-        except Exception as e:
-            print(f"[QuizGen] Gemini error: {e}")
-            questions = None
+    # 2b. Fall back to Google Gemini
+    if not questions:
+        api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if api_key:
+            try:
+                from google import genai
+                from google.genai import types as genai_types
+
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=quiz_prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction="You are a quiz generator API. Generate educational multiple-choice questions. Respond with valid JSON only, no markdown code fences.",
+                        temperature=0.8,
+                        max_output_tokens=2000,
+                        response_mime_type="application/json",
+                    ),
+                )
+
+                raw = response.text.strip()
+                if raw.startswith("```"):
+                    raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+                parsed = json.loads(raw)
+                questions = parsed.get("questions", [])
+                metadata["generation_method"] = "llm_gemini"
+
+            except Exception as e:
+                print(f"[QuizGen] Gemini error: {e}")
+                questions = None
 
     # 3. Fallback to curated questions
     if not questions:
         category = course.get("category", "General")
         pool = _FALLBACK_QUESTIONS.get(category, _FALLBACK_QUESTIONS["General"])
         # Shuffle and pick requested number
-        import random
         shuffled = random.sample(pool, min(payload.num_questions, len(pool)))
         questions = shuffled
         metadata["generation_method"] = "curated_fallback"

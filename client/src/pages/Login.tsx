@@ -33,7 +33,7 @@ export default function Login() {
     setError(null);
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error, profile: signedInProfile } = await signIn(email, password);
 
     if (error) {
       if (error.message === "USER_NOT_FOUND") {
@@ -47,8 +47,8 @@ export default function Login() {
       return;
     }
 
-    // navigate immediately - profile loads in background
-    if (email.toLowerCase().includes("admin")) {
+    // Navigate based on role; fall back to email heuristic if profile not yet loaded
+    if (signedInProfile?.role === "admin" || email.toLowerCase().includes("admin")) {
       navigate("/admin");
     } else {
       navigate("/dashboard");

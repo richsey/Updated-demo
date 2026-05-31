@@ -4,5 +4,12 @@ supabase
 python-dotenv
 faiss-cpu
 numpy
+requests
 google-genai
 scikit-learn
+openai
+ollama
+# sentence-transformers requires PyTorch (Python <= 3.12).
+# On Python 3.14+, the system automatically falls back to scikit-learn TF-IDF.
+# Install manually if your environment supports it:
+#   pip install sentence-transformers

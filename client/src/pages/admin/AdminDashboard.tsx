@@ -1,8 +1,92 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen, ClipboardList, TrendingUp, ArrowUpRight, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, BookOpen, ClipboardList, TrendingUp, ArrowUpRight, Loader2, Bot, Wifi, WifiOff } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAdminStats } from "@/lib/api/admin";
+import { useEffect, useState } from "react";
+
+interface OllamaStatus {
+  running: boolean;
+  model: string;
+  base_url: string;
+  available_models: string[];
+}
+
+function OllamaStatusCard() {
+  const [status, setStatus] = useState<OllamaStatus | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch("http://localhost:8001/ollama/status");
+      if (!res.ok) throw new Error("bad response");
+      const data: OllamaStatus = await res.json();
+      setStatus(data);
+    } catch {
+      setStatus({ running: false, model: "phi3", base_url: "http://localhost:11434", available_models: [] });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    checkStatus();
+    const interval = setInterval(checkStatus, 30_000); // re-check every 30 s
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Card className="border-border/60 relative overflow-hidden">
+      <div className="absolute top-0 right-0 h-24 w-24 bg-violet-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl" />
+      <CardContent className="p-5 relative">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400">
+            <Bot className="h-5 w-5" />
+          </div>
+          {checking ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : status?.running ? (
+            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 gap-1 text-xs">
+              <Wifi className="h-3 w-3" /> Running
+            </Badge>
+          ) : (
+            <Badge className="bg-red-500/15 text-red-400 border border-red-500/30 gap-1 text-xs">
+              <WifiOff className="h-3 w-3" /> Offline
+            </Badge>
+          )}
+        </div>
+
+        <p className="text-xl font-bold font-display">
+          {checking ? "—" : status?.running ? status.model : "Not running"}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">Local Ollama LLM</p>
+
+        {!checking && status?.running && status.available_models.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1">
+            {status.available_models.slice(0, 4).map((m) => (
+              <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-mono">
+                {m.split(":")[0]}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {!checking && !status?.running && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Run <code className="text-violet-400 font-mono">ollama serve</code> to enable local AI
+          </p>
+        )}
+
+        {!checking && status?.running && (
+          <p className="mt-2 text-[11px] text-emerald-400/80">
+            Using local AI — no cloud API needed
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AdminDashboard() {
   const { data: stats, isLoading } = useQuery({
@@ -50,6 +134,9 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Ollama status card — full width below the stat grid */}
+      <OllamaStatusCard />
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">

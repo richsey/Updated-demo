@@ -123,13 +123,16 @@ async function markMaterialCompleteViaSupabase(
   );
 
   // 6. Update student_progress (compatibility)
-  await (supabase as any).from("student_progress").upsert({
-    user_id: userId,
-    course_id: courseId,
-    progress,
-    last_accessed: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).catch(() => {});
+  await (supabase as any).from("student_progress").upsert(
+    {
+      user_id: userId,
+      course_id: courseId,
+      progress,
+      last_accessed: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,course_id" }
+  ).catch(() => {});
 
   // 7. Find next material & recommendation
   let nextMaterial: AIRecommendation["recommended_next_material"] = null;

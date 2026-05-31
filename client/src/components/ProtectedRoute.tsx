@@ -7,10 +7,11 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, profileLoading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  // Wait for both auth session AND profile to resolve before making role decisions
+  if (loading || (user && profileLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

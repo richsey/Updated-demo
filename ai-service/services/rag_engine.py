@@ -3,15 +3,19 @@ RAG Recommendation Engine for DataFlow AI
 ==========================================
 Production-ready Retrieval-Augmented Generation pipeline that:
 1. Retrieves user progress, quiz scores, and telemetry from Supabase
-2. Embeds all course materials using TF-IDF (offline, no API key needed)
+2. Embeds all course materials using sentence-transformers (all-MiniLM-L6-v2)
 3. Identifies weak areas from quiz performance and incomplete materials
 4. Retrieves top-k relevant materials via FAISS cosine similarity
-5. Generates personalized recommendations via OpenAI GPT-4o-mini (with rule-based fallback)
+5. Generates personalized recommendations via:
+     a) Ollama Gemma (local LLM — no API key, runs offline)
+     b) Curated rule-based fallback (always available)
 
 Embedding Strategy:
-  - Embeddings: TF-IDF from scikit-learn — works offline, no API key needed
-  - LLM Generation: OpenAI GPT-4o-mini — requires OPENAI_API_KEY in .env
-  - Response Cache: per-user TTL cache (30 min) to avoid redundant API calls
+  - Embeddings: sentence-transformers/all-MiniLM-L6-v2 (384-dim, CPU-friendly)
+  - Singleton embedding model — loaded once, reused across all requests
+  - Singleton FAISS index — built once, cached in memory
+  - LLM Generation: Ollama Gemma → curated rule-based fallback
+  - Response Cache: per-user TTL cache (30 min) to avoid redundant LLM calls
 """
 
 import os
@@ -33,14 +37,22 @@ if not logger.handlers:
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"  # 1536-dim, fast, cheap
-OPENAI_EMBEDDING_DIM = 1536
-TFIDF_MAX_FEATURES = 512                            # TF-IDF fallback dimensionality
+SENTENCE_TRANSFORMER_MODEL = "all-MiniLM-L6-v2"    # 384-dim, fast, CPU-friendly
+EMBEDDING_DIM = 384
 TOP_K_RETRIEVAL = 5                                  # Max candidates to retrieve
 WEAK_SCORE_THRESHOLD = 60                            # Quiz score % below this = weak
 MAX_RECOMMENDATIONS = 3                              # Final recommendations to return
 RAG_CACHE_TTL_SECONDS = 1800                         # Cache per-user results for 30 min
-OPENAI_LLM_MODEL = "gpt-4o-mini"                    # Model used for recommendation generation
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3")   # Local Ollama model (Gemma 3)
+
+# Import Ollama service (graceful — won't crash if package missing)
+try:
+    from services.ollama_service import generate as _ollama_generate
+except ImportError:
+    try:
+        from ollama_service import generate as _ollama_generate
+    except ImportError:
+        _ollama_generate = None  # type: ignore
 
 
 # ─── Data Models ──────────────────────────────────────────────────────────────
@@ -98,12 +110,11 @@ class RAGContext:
 class EmbeddingCache:
     """
     In-memory singleton that caches material embeddings and the FAISS index.
-    Embeddings are built once on first request and reused across all subsequent
-    requests. Call rebuild() to force a refresh (e.g., after admin adds content).
+    Embeddings are built once on first request and reused.
 
-    Supports two embedding backends:
-      1. OpenAI text-embedding-3-small (if OPENAI_API_KEY is set)
-      2. TF-IDF from scikit-learn (offline fallback)
+    Embedding backend (auto-detected at runtime):
+      1. sentence-transformers/all-MiniLM-L6-v2 (384-dim) — if PyTorch available
+      2. scikit-learn TF-IDF (512-dim fallback)            — works on Python 3.14+
     """
 
     _instance = None
@@ -118,117 +129,94 @@ class EmbeddingCache:
         if self._initialized:
             return
         self._initialized = True
-        self._index: Optional[faiss.IndexFlatIP] = None  # Inner product (cosine on L2-normalized vecs)
+        self._index: Optional[faiss.IndexFlatIP] = None
         self._materials: List[MaterialRecord] = []
         self._embeddings: Optional[np.ndarray] = None
         self._dimension: int = 0
-        self._backend: str = "none"
+        self._backend: str = "unknown"
         self._built_at: Optional[float] = None
-        # TF-IDF vectorizer (kept for query-time transforms)
+        # Embedding state
+        self._st_model = None
         self._tfidf_vectorizer = None
-        logger.info("Singleton created")
+        logger.info("[AI] EmbeddingCache singleton created")
 
     @property
     def is_ready(self) -> bool:
         return self._index is not None and len(self._materials) > 0
 
-    # ── OpenAI Embedding Backend ──
+    # ── sentence-transformers path ──
 
-    def _embed_openai(self, texts: List[str]) -> Optional[np.ndarray]:
-        """Generate embeddings using OpenAI's text-embedding-3-small model."""
-        api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        if not api_key:
-            return None
-
+    def _try_load_st(self) -> bool:
+        if self._st_model is not None:
+            return True
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key)
-
-            logger.info(f"Generating OpenAI embeddings for {len(texts)} texts...")
-            t0 = time.time()
-
-            # OpenAI supports batching up to 2048 texts
-            response = client.embeddings.create(
-                model=OPENAI_EMBEDDING_MODEL,
-                input=texts,
+            from sentence_transformers import SentenceTransformer
+            logger.info("[AI] Loading embeddings... (sentence-transformers)")
+            self._st_model = SentenceTransformer(SENTENCE_TRANSFORMER_MODEL)
+            self._backend = "sentence-transformers"
+            logger.info(f"sentence-transformers model '{SENTENCE_TRANSFORMER_MODEL}' loaded")
+            return True
+        except Exception as exc:
+            logger.info(
+                f"sentence-transformers unavailable ({exc.__class__.__name__}); "
+                "falling back to TF-IDF"
             )
+            return False
 
-            embeddings = np.array(
-                [item.embedding for item in response.data],
-                dtype=np.float32,
-            )
+    def _encode_st(self, texts: List[str]) -> np.ndarray:
+        embeddings = self._st_model.encode(
+            texts, normalize_embeddings=True, show_progress_bar=False, batch_size=32
+        )
+        return np.array(embeddings, dtype=np.float32)
 
-            elapsed = time.time() - t0
-            logger.info(f"OpenAI embeddings generated in {elapsed:.2f}s (dim={embeddings.shape[1]})")
-            return embeddings
+    # ── TF-IDF fallback path ──
 
-        except Exception as e:
-            logger.warning(f"OpenAI embedding failed: {e}")
-            return None
-
-    # ── TF-IDF Fallback Backend ──
-
-    def _embed_tfidf(self, texts: List[str], fit: bool = True) -> np.ndarray:
-        """
-        Generate embeddings using TF-IDF. Works offline with no API key.
-        When fit=True, fits the vectorizer on the texts (for building the index).
-        When fit=False, transforms using the existing vectorizer (for queries).
-        """
+    def _encode_tfidf(self, texts: List[str], fit: bool = False) -> np.ndarray:
         from sklearn.feature_extraction.text import TfidfVectorizer
-
-        logger.info(f"Generating TF-IDF embeddings for {len(texts)} texts (fit={fit})...")
-        t0 = time.time()
-
-        if fit:
+        if fit or self._tfidf_vectorizer is None:
+            logger.info(f"[AI] Loading embeddings... (TF-IDF/{TFIDF_MAX_FEATURES}-dim)")
             self._tfidf_vectorizer = TfidfVectorizer(
                 max_features=TFIDF_MAX_FEATURES,
                 stop_words="english",
-                ngram_range=(1, 2),  # Unigrams + bigrams for better matching
-                sublinear_tf=True,   # Log-normalized TF
+                ngram_range=(1, 2),
+                sublinear_tf=True,
             )
+            self._backend = "tfidf"
             matrix = self._tfidf_vectorizer.fit_transform(texts)
         else:
-            if self._tfidf_vectorizer is None:
-                raise RuntimeError("TF-IDF vectorizer not fitted yet")
             matrix = self._tfidf_vectorizer.transform(texts)
+        emb = np.array(matrix.toarray(), dtype=np.float32)
+        norms = np.linalg.norm(emb, axis=1, keepdims=True)
+        norms = np.where(norms == 0, 1.0, norms)
+        return emb / norms
 
-        # Convert sparse matrix to dense numpy array
-        embeddings = np.array(matrix.toarray(), dtype=np.float32)
+    # ── Unified encode ──
 
-        elapsed = time.time() - t0
-        logger.info(f"TF-IDF embeddings generated in {elapsed:.2f}s (dim={embeddings.shape[1]})")
-        return embeddings
+    def _embed(self, texts: List[str], fit_tfidf: bool = False) -> np.ndarray:
+        """Encode texts using whichever backend is available."""
+        if self._try_load_st():
+            return self._encode_st(texts)
+        return self._encode_tfidf(texts, fit=fit_tfidf)
 
     # ── Build Index ──
 
     def build(self, materials: List[MaterialRecord]) -> Dict[str, Any]:
         """
         Build embeddings for all materials and create a FAISS index.
-        Tries OpenAI embeddings first, falls back to TF-IDF.
-        Uses cosine similarity via L2-normalized vectors + inner product index.
+        Uses cosine similarity via L2-normalised vectors + inner product index.
         """
         if not materials:
             logger.warning("No materials to embed")
             return {"status": "no_materials", "count": 0}
 
         texts = [m.embedding_text for m in materials]
+        embeddings = self._embed(texts, fit_tfidf=True)
 
-        # Try OpenAI first, fall back to TF-IDF
-        embeddings = self._embed_openai(texts)
-        if embeddings is not None:
-            self._backend = "openai"
-        else:
-            embeddings = self._embed_tfidf(texts, fit=True)
-            self._backend = "tfidf"
+        dim = embeddings.shape[1]
+        self._dimension = dim
 
-        # L2-normalize for cosine similarity via inner product
-        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        norms = np.where(norms == 0, 1, norms)  # Avoid division by zero
-        embeddings = embeddings / norms
-
-        # Build FAISS index
-        self._dimension = embeddings.shape[1]
-        index = faiss.IndexFlatIP(self._dimension)
+        # Build FAISS index (inner product = cosine on unit vectors)
+        index = faiss.IndexFlatIP(dim)
         index.add(embeddings)
 
         # Store in cache
@@ -239,13 +227,13 @@ class EmbeddingCache:
 
         logger.info(
             f"Built FAISS index: {len(materials)} materials, "
-            f"dim={self._dimension}, backend={self._backend}"
+            f"dim={dim}, backend={self._backend}"
         )
 
         return {
             "status": "built",
             "material_count": len(materials),
-            "dimension": self._dimension,
+            "dimension": dim,
             "backend": self._backend,
             "built_at": self._built_at,
         }
@@ -261,21 +249,8 @@ class EmbeddingCache:
             logger.warning("Index not built yet")
             return []
 
-        # Encode query using the same backend that built the index
-        if self._backend == "openai":
-            query_emb = self._embed_openai([query_text])
-            if query_emb is None:
-                # OpenAI failed on query — fall back to rebuilding with TF-IDF
-                logger.warning("OpenAI unavailable for query, cannot search")
-                return []
-        else:
-            query_emb = self._embed_tfidf([query_text], fit=False)
-
-        # L2-normalize query
-        norm = np.linalg.norm(query_emb)
-        if norm > 0:
-            query_emb = query_emb / norm
-        query_emb = query_emb.astype(np.float32)
+        # Encode query with same backend (no refit for TF-IDF)
+        query_emb = self._embed([query_text], fit_tfidf=False).astype(np.float32)
 
         # Search FAISS
         k = min(top_k, len(self._materials))
@@ -292,6 +267,7 @@ class EmbeddingCache:
 
 # Global singleton instance
 _cache = EmbeddingCache()
+
 
 # ─── Per-User Response Cache ──────────────────────────────────────────────────
 # Stores (result_dict, expiry_timestamp) keyed by user_id.
@@ -706,58 +682,48 @@ You MUST respond with ONLY valid JSON in this exact format, no other text:
 
 def generate_recommendations_llm(context: RAGContext) -> Optional[Dict[str, Any]]:
     """
-    Call OpenAI GPT-4o-mini to generate external resource recommendations.
-    Returns parsed JSON or None if the LLM is unavailable.
-    Requires OPENAI_API_KEY to be set in ai-service/.env.
+    Generate personalized external resource recommendations using Ollama Gemma.
+
+    Priority chain:
+      1. Ollama Gemma (local LLM — no API key, offline)
+      2. Returns None → caller uses curated rule-based fallback
     """
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        logger.info("No OPENAI_API_KEY — skipping LLM generation")
-        return None
+    prompt = _build_prompt(context)
 
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
-        prompt = _build_prompt(context)
+    # ─── Try Ollama Gemma (local) ─────────────────────────────────────────────
+    if _ollama_generate is not None:
+        try:
+            logger.info(f"[AI] Calling Ollama model='{OLLAMA_MODEL}' for RAG recommendations...")
+            t0 = time.time()
 
-        logger.info(f"Calling OpenAI {OPENAI_LLM_MODEL} for recommendations...")
-        t0 = time.time()
+            raw = _ollama_generate(
+                prompt=prompt,
+                model=OLLAMA_MODEL,
+                system="You are a JSON-only API. Recommend real external learning resources. Respond with valid JSON only. No markdown, no explanation.",
+                temperature=0.5,
+            )
 
-        response = client.chat.completions.create(
-            model=OPENAI_LLM_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a JSON-only API. Respond with valid JSON only. Recommend real, well-known external learning resources.",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.7,
-            max_tokens=1000,
-            response_format={"type": "json_object"},
-        )
+            if raw:
+                result = json.loads(raw)
+                if "recommendations" in result and result["recommendations"]:
+                    elapsed = time.time() - t0
+                    logger.info(
+                        f"[AI] Recommendations generated. "
+                        f"Ollama response in {elapsed:.2f}s ({len(raw)} chars)"
+                    )
+                    return result
+                else:
+                    logger.warning("Ollama response missing 'recommendations' key or empty list")
 
-        raw = response.choices[0].message.content.strip()
-        elapsed = time.time() - t0
-        logger.info(f"OpenAI response received in {elapsed:.2f}s ({len(raw)} chars)")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Ollama JSON parse error: {e}")
+        except Exception as e:
+            logger.warning(f"Ollama RAG generation error: {e}")
+    else:
+        logger.debug("ollama_service not available — skipping Ollama")
 
-        result = json.loads(raw)
-
-        if "recommendations" not in result:
-            logger.warning("OpenAI response missing 'recommendations' key")
-            return None
-
-        return result
-
-    except ImportError:
-        logger.warning("openai package not installed — run: pip install openai")
-        return None
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse OpenAI JSON response: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"OpenAI API error: {e}")
-        return None
+    logger.info("Ollama unavailable — will use curated fallback")
+    return None
 
 
 # ─── Curated External Resources (Fallback) ────────────────────────────────────
@@ -986,6 +952,12 @@ def get_rag_recommendations(supabase, user_id: str) -> Dict[str, Any]:
         }
     }
     """
+    if not user_id or not user_id.strip():
+        return {
+            "recommendations": [],
+            "metadata": {"error": "user_id is required", "pipeline": "rag"},
+        }
+
     t_start = time.time()
     metadata: Dict[str, Any] = {"user_id": user_id, "pipeline": "rag"}
 
@@ -1058,10 +1030,10 @@ def get_rag_recommendations(supabase, user_id: str) -> Dict[str, Any]:
     metadata["user_level"] = context.user_level
     metadata["content_type_preference"] = context.content_type_preference
 
-    # ── Step 6: Generate recommendations (LLM → fallback) ──
+    # ── Step 6: Generate recommendations (Ollama Gemma → curated fallback) ──
     result = generate_recommendations_llm(context)
     if result is not None:
-        metadata["generation_method"] = "llm_openai"
+        metadata["generation_method"] = "llm_ollama_gemma"
     else:
         result = generate_recommendations_fallback(context)
         metadata["generation_method"] = "rule_based_fallback"

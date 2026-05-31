@@ -25,10 +25,11 @@ interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean;
   signIn: (
     email: string,
     password: string,
-  ) => Promise<{ error: Error | null; isNewUser?: boolean }>;
+  ) => Promise<{ error: Error | null; isNewUser?: boolean; profile?: Profile | null }>;
   signUp: (
     email: string,
     password: string,
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const profileFetchRef = useRef<{ [key: string]: Promise<Profile | null> }>(
     {},
   );
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return profileFetchRef.current[userId];
     }
 
+    setProfileLoading(true);
     const fetchPromise = (async () => {
       try {
         console.log("[Auth] Fetching profile for:", userId);
@@ -68,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       } finally {
         delete profileFetchRef.current[userId];
+        setProfileLoading(false);
       }
     })();
 
@@ -139,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       } else {
         setProfile(null);
+        setProfileLoading(false);
       }
     });
 
@@ -152,6 +157,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     console.log("[Auth] Attempting sign in for:", email);
     const startTime = performance.now();
+
+    // Clear any stale cached profile before signing in
+    setProfile(null);
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -171,8 +179,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       performance.now() - startTime,
       "ms",
     );
-    // Profile will be fetched in background - don't wait for it
-    return { error: null };
+    // Fetch profile immediately so caller can use the role for navigation
+    let signedInProfile: Profile | null = null;
+    if (data?.user) {
+      try {
+        // Clear stale cache so fetchProfile hits the DB fresh
+        await CacheManager.clear(`profile_${data.user.id}`);
+        signedInProfile = await fetchProfile(data.user.id);
+        if (signedInProfile) setProfile(signedInProfile);
+      } catch {
+        // Non-fatal — profile will be set via onAuthStateChange
+      }
+    }
+    return { error: null, profile: signedInProfile };
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -193,6 +212,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error(msg) };
     }
 
+    // Helper: set role in app_metadata via server (safe, uses service role key)
+    const setRoleViaServer = (userId: string) =>
+      fetch("http://localhost:5000/api/auth/set-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, email }),
+      }).catch((err) => console.warn("[Auth] set-role call failed (non-fatal):", err));
+
     // If we have a user but no session, it usually means email confirmation is enabled
     if (data.user && !data.session) {
       console.log(
@@ -200,7 +227,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         performance.now() - startTime,
         "ms",
       );
-      // Still try to create profile in background
+      // Set role in background, then create profile
+      setRoleViaServer(data.user.id);
       ensureProfileExists(data.user.id, email, fullName).catch((err) => {
         console.error("[Auth] Background profile creation failed:", err);
       });
@@ -215,6 +243,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       performance.now() - startTime,
       "ms",
     );
+
+    // Set role via server (so app_metadata.role is immediately correct)
+    if (data.user) {
+      await setRoleViaServer(data.user.id);
+    }
 
     // Explicitly create profile to ensure it exists (fixes trigger failure)
     if (data.user) {
@@ -247,7 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signIn, signUp, signOut }}
+      value={{ session, user, profile, loading, profileLoading, signIn, signUp, signOut }}
     >
       {children}
     </AuthContext.Provider>

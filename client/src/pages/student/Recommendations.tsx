@@ -21,23 +21,25 @@ interface CourseAIData {
 
 interface RAGRecommendation {
   title: string;
-  url: string;
-  source: string;
   reason: string;
   difficulty: string;
-  // Legacy fields (may be present from fallback)
-  material_id?: string;
+  priority: number;
+  // Optional — present when LLM recommends external resources
+  url?: string;
+  source?: string;
 }
 
 interface RAGResponse {
   recommendations: RAGRecommendation[];
   metadata: {
-    user_level: string;
-    weak_topics: string[];
-    generation_method: string;
-    elapsed_seconds: number;
-    candidates_retrieved: number;
-    content_type_preference: string | null;
+    user_level?: string;
+    weak_topics?: string[];
+    strong_topics?: string[];
+    generation_method?: string;
+    elapsed_seconds?: number;
+    candidates_retrieved?: number;
+    avg_quiz_score?: number;
+    completion_pct?: number;
     [key: string]: any;
   };
 }
@@ -250,9 +252,13 @@ export default function Recommendations() {
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-violet-400" />
               <h2 className="font-bold font-display text-base">AI-Recommended Resources</h2>
-              {ragData?.metadata?.generation_method && (
+                        {ragData?.metadata?.generation_method && (
                 <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground border-border/40">
-                  {ragData.metadata.generation_method === "llm" ? "GPT-4o" : "AI Engine"}
+                  {ragData.metadata.generation_method === "llm_ollama_gemma"
+                    ? "Gemma ✨"
+                    : ragData.metadata.generation_method === "llm"
+                    ? "AI Engine"
+                    : "Rule-based"}
                 </Badge>
               )}
             </div>
@@ -294,48 +300,60 @@ export default function Recommendations() {
             </div>
           )}
 
-          {!ragLoading && !ragError && ragData && ragData.recommendations.length > 0 && (
+                    {!ragLoading && !ragError && ragData && ragData.recommendations.length > 0 && (
             <div className="grid gap-3">
-              {ragData.recommendations.map((rec, idx) => (
-                <a
+              {ragData.recommendations
+                .slice()
+                .sort((a, b) => a.priority - b.priority)
+                .map((rec, idx) => (
+                <div
                   key={idx}
-                  href={rec.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group rounded-xl border border-border/60 bg-card/80 p-4 flex flex-col sm:flex-row sm:items-center gap-3 transition-all hover:border-violet-500/40 hover:shadow-md hover:bg-card"
+                  className="group rounded-xl border border-border/60 bg-card/80 p-4 flex flex-col sm:flex-row sm:items-start gap-3 transition-all hover:border-violet-500/40 hover:shadow-md hover:bg-card"
                 >
-                  {/* Icon + Source */}
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex-shrink-0">
-                    <SourceIcon source={rec.source} />
+                  {/* Priority Badge + Icon */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold text-sm">
+                      #{rec.priority}
+                    </div>
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-sm group-hover:text-violet-400 transition-colors truncate">
+                      <h3 className="font-semibold text-sm group-hover:text-violet-400 transition-colors">
                         {rec.title}
                       </h3>
-                      <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {rec.url && (
+                        <a
+                          href={rec.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-violet-400 hover:text-violet-300 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                       {rec.reason}
                     </p>
                     <div className="flex items-center gap-2 pt-0.5">
-                      <SourceBadge source={rec.source} />
                       <DifficultyBadge level={rec.difficulty} />
+                      {rec.source && <SourceBadge source={rec.source} />}
                     </div>
                   </div>
 
                   {/* Arrow */}
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all hidden sm:block" />
-                </a>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all hidden sm:block mt-3" />
+                </div>
               ))}
             </div>
           )}
 
           {/* Metadata footer */}
           {ragData?.metadata && (
-            <div className="flex items-center gap-3 pt-2 border-t border-border/30">
+            <div className="flex items-center gap-3 pt-2 border-t border-border/30 flex-wrap">
               {ragData.metadata.user_level && (
                 <span className="text-[10px] text-muted-foreground">
                   Level: <DifficultyBadge level={ragData.metadata.user_level} />
@@ -343,7 +361,12 @@ export default function Recommendations() {
               )}
               {ragData.metadata.weak_topics && ragData.metadata.weak_topics.length > 0 && (
                 <span className="text-[10px] text-muted-foreground">
-                  Focus: {ragData.metadata.weak_topics.slice(0, 2).join(", ")}
+                  Weak areas: {ragData.metadata.weak_topics.slice(0, 2).join(", ")}
+                </span>
+              )}
+              {ragData.metadata.avg_quiz_score !== undefined && (
+                <span className="text-[10px] text-muted-foreground">
+                  Avg quiz: {ragData.metadata.avg_quiz_score}%
                 </span>
               )}
               <span className="text-[10px] text-muted-foreground ml-auto">

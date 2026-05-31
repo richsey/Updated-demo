@@ -1,4 +1,4 @@
 {
-  "venvPath": ".",
-  "venv": ".venv"
+  "venvPath": "ai-service",
+  "venv": "venv"
 }

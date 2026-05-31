@@ -15,8 +15,10 @@ interface ProgressInfo {
 
 export default function QuizList() {
   const { user } = useAuth();
-  const { data: quizzes = [], isLoading: loadingQuizzes, isError: quizError, error: quizErrorMsg } = useQuizzes();
-  const { data: courses = [], isLoading: loadingCourses, isError: courseError } = useCourses();
+  const { data: quizzesRaw, isLoading: loadingQuizzes, isError: quizError, error: quizErrorMsg } = useQuizzes();
+  const { data: coursesRaw, isLoading: loadingCourses, isError: courseError } = useCourses();
+  const quizzes = (quizzesRaw ?? []) as any[];
+  const courses = (coursesRaw ?? []) as any[];
   const [progressMap, setProgressMap] = useState<Record<string, ProgressInfo>>({});
 
   useEffect(() => {
@@ -30,11 +32,11 @@ export default function QuizList() {
             if (data.total_materials > 0) {
               return [c.id, data] as [string, ProgressInfo];
             }
-          } catch {
-            // fallback below
+          } catch (e) {
+            console.warn("[QuizList] fetchCourseProgressAPI failed, using fallback:", e);
           }
           // Fallback to old progress calculation
-          const pct = await computeCourseProgress(user.id, c.materials ?? []);
+          const pct = await computeCourseProgress(user.id, (c as any).materials ?? []);
           return [c.id, { progress: pct, completed_materials: 0, total_materials: 0 }] as [string, ProgressInfo];
         })
       );
@@ -62,14 +64,14 @@ export default function QuizList() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {quizzes.map((quiz) => {
-            const course = courses.find((c) => c.id === quiz.course_id);
+          {(quizzes as any[]).map((quiz: any) => {
+            const course = (courses as any[]).find((c: any) => c.id === quiz.course_id);
             const progressInfo = progressMap[quiz.course_id];
             const progress = progressInfo?.progress ?? 0;
             const completedMats = progressInfo?.completed_materials ?? 0;
             const totalMats = progressInfo?.total_materials ?? 0;
             const unlocked = progress >= 100;
-            const questions = (quiz as any).questions ?? [];
+            const questions = quiz.questions ?? [];
 
             return (
               <div key={quiz.id}

@@ -20,7 +20,6 @@ import {
   updateCourseProgress,
   fetchMaterialProgress,
   updateMaterialProgress,
-  computeCourseProgress,
 } from "@/lib/api/progress";
 import { useAuth } from "@/contexts/AuthContext";
 

@@ -82,8 +82,29 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
       return cached;
     }
 
-    // ── Fast path: build profile from the JWT session (no DB query needed) ──
-    // This bypasses the 42P17 infinite recursion RLS bug on the profiles table.
+    // ── Primary path: fetch from the profiles DB table for accurate role ──
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single() as { data: Profile | null; error: any };
+
+    if (!error && data) {
+      console.log("[Profile] Fetched from DB, role:", data.role);
+      await CacheManager.set(`profile_${userId}`, data, 5 * 60 * 1000);
+      return data as Profile;
+    }
+
+    // ── Fallback: build profile from JWT session if DB query fails (e.g. 42P17 RLS) ──
+    if (error) {
+      // 42P17 = infinite recursion in RLS policy
+      if (error.code === "42P17") {
+        console.warn("[Profile] RLS infinite recursion detected – falling back to JWT profile.");
+      } else {
+        console.error("[Profile] DB fetch error:", error);
+      }
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -105,50 +126,13 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
         created_at: u.created_at ?? new Date().toISOString(),
       };
 
-      // Cache the JWT-derived profile briefly so we don't rebuild it every render
+      // Cache briefly
       await CacheManager.set(`profile_${userId}`, jwtProfile, 2 * 60 * 1000);
-      console.log("[Profile] Built from JWT session (bypassed profiles table)");
-
-      // Attempt a real DB fetch in the background to get accurate role/name
-      // but don't await it — if it fails with 42P17 we silently ignore it.
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single()
-        .then(({ data, error }) => {
-          if (!error && data) {
-            CacheManager.set(`profile_${userId}`, data as Profile, 5 * 60 * 1000);
-          }
-          // Silently swallow 42P17 (infinite recursion in RLS policy)
-        });
-
+      console.log("[Profile] Built from JWT session (DB fallback), role:", role);
       return jwtProfile;
     }
 
-    // ── Fallback: direct DB query if no session available ──
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single() as { data: Profile | null; error: any };
-
-    if (error) {
-      // 42P17 = infinite recursion in RLS policy — return null gracefully
-      if (error.code === "42P17") {
-        console.warn("[Profile] RLS infinite recursion detected – profile unavailable until fixed in Supabase dashboard.");
-        return null;
-      }
-      console.error("[Profile] Fetch error:", error);
-      return null;
-    }
-
-    // Cache it
-    if (data) {
-      await CacheManager.set(`profile_${userId}`, data, 5 * 60 * 1000);
-    }
-
-    return data as Profile;
+    return null;
   } catch (err) {
     console.error("[Profile] Unexpected error:", err);
     return null;
