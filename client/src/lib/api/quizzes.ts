@@ -12,7 +12,7 @@ async function fetchQuestionsForQuiz(quizId: string) {
   const { data, error } = await supabase
     .from("questions")
     .select("*")
-    .eq("quiz_id", quizId);
+    .eq("quizzes_id", quizId);
 
   if (error) {
     console.warn("[Quizzes] Could not load questions for quiz", quizId, error.message);
@@ -26,7 +26,7 @@ async function fetchQuestionsForQuizzes(quizIds: string[]) {
   const { data, error } = await supabase
     .from("questions")
     .select("*")
-    .in("quiz_id", quizIds);
+    .in("quizzes_id", quizIds);
 
   if (error) {
     console.warn("[Quizzes] Could not load questions batch:", error.message);
@@ -50,7 +50,7 @@ export async function fetchQuizzes() {
   const questions = await fetchQuestionsForQuizzes(quizzes.map((q) => q.id));
   return quizzes.map((quiz) => ({
     ...quiz,
-    questions: questions.filter((q: any) => q.quiz_id === quiz.id),
+    questions: questions.filter((q: any) => q.quizzes_id === quiz.id),
   }));
 }
 
@@ -73,7 +73,7 @@ export async function fetchQuizByCourseId(courseId: string) {
     .from("quizzes")
     .select("*")
     .eq("course_id", courseId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
   if (!data) return null;

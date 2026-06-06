@@ -12,14 +12,22 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   role       TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'admin')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Admin helper function to avoid RLS recursion
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can read own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Admins can read all profiles" ON public.profiles FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can read all profiles" ON public.profiles FOR SELECT USING (public.is_admin());
 
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -60,9 +68,7 @@ CREATE TABLE IF NOT EXISTS public.courses (
 
 ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Courses are publicly readable" ON public.courses FOR SELECT USING (true);
-CREATE POLICY "Admins can manage courses" ON public.courses FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can manage courses" ON public.courses FOR ALL USING (public.is_admin());
 
 -- ─── 3. MATERIALS ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.materials (
@@ -78,9 +84,7 @@ CREATE TABLE IF NOT EXISTS public.materials (
 
 ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Materials are publicly readable" ON public.materials FOR SELECT USING (true);
-CREATE POLICY "Admins can manage materials" ON public.materials FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can manage materials" ON public.materials FOR ALL USING (public.is_admin());
 
 -- ─── 4. QUIZZES ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.quizzes (
@@ -92,9 +96,7 @@ CREATE TABLE IF NOT EXISTS public.quizzes (
 
 ALTER TABLE public.quizzes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Quizzes are publicly readable" ON public.quizzes FOR SELECT USING (true);
-CREATE POLICY "Admins can manage quizzes" ON public.quizzes FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can manage quizzes" ON public.quizzes FOR ALL USING (public.is_admin());
 
 -- ─── 5. QUESTIONS ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.questions (
@@ -109,9 +111,7 @@ CREATE TABLE IF NOT EXISTS public.questions (
 
 ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Questions are publicly readable" ON public.questions FOR SELECT USING (true);
-CREATE POLICY "Admins can manage questions" ON public.questions FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can manage questions" ON public.questions FOR ALL USING (public.is_admin());
 
 -- ─── 6. QUIZ ATTEMPTS ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.quiz_attempts (
@@ -126,9 +126,7 @@ CREATE TABLE IF NOT EXISTS public.quiz_attempts (
 
 ALTER TABLE public.quiz_attempts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read/insert own quiz attempts" ON public.quiz_attempts FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Admins can read all quiz attempts" ON public.quiz_attempts FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can read all quiz attempts" ON public.quiz_attempts FOR SELECT USING (public.is_admin());
 
 -- ─── 7. STUDENT PROGRESS ──────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.student_progress (
@@ -143,9 +141,7 @@ CREATE TABLE IF NOT EXISTS public.student_progress (
 
 ALTER TABLE public.student_progress ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage own progress" ON public.student_progress FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Admins can read all progress" ON public.student_progress FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can read all progress" ON public.student_progress FOR SELECT USING (public.is_admin());
 
 -- ─── 8. MATERIAL PROGRESS ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.material_progress (
@@ -174,9 +170,7 @@ CREATE TABLE IF NOT EXISTS public.telemetry (
 
 ALTER TABLE public.telemetry ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage own telemetry" ON public.telemetry FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Admins can read all telemetry" ON public.telemetry FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
-);
+CREATE POLICY "Admins can read all telemetry" ON public.telemetry FOR SELECT USING (public.is_admin());
 
 CREATE INDEX IF NOT EXISTS telemetry_user_event_entity ON public.telemetry (user_id, event_type, entity_id);
 

@@ -28,15 +28,17 @@ export default function UploadMaterial() {
       .eq("course_id", courseId)
       .order("order_index", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    const { error } = await supabase.from("materials").insert({
+    const nextIndex = ((maxOrder.data as any)?.order_index ?? 0) + 1;
+
+    const { error } = await (supabase.from("materials") as any).insert({
       course_id: courseId,
       title: data.get("title") as string,
       type: matType,
       url: data.get("url") as string || "",
       duration_minutes: parseInt(data.get("duration") as string || "0"),
-      order_index: (maxOrder.data?.order_index ?? 0) + 1,
+      order_index: nextIndex,
     });
 
     setSaving(false);

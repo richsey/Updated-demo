@@ -35,22 +35,22 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-from services.ollama_client import call_ollama, get_ollama_status
+from services.gemini_service import generate_with_gemini, get_gemini_status
 
 @app.get("/")
 def home():
     return {"message": "AI Service Connected to Supabase 🚀"}
 
 
-# ─── Ollama Status ────────────────────────────────────────────────────────────
+# ─── Gemini Status ────────────────────────────────────────────────────────────
 
-@app.get("/ollama/status")
-async def ollama_status():
+@app.get("/gemini/status")
+async def gemini_status():
     """
-    Health-check for the local Ollama instance.
-    Returns running status, current model, and list of available models.
+    Health-check for the Google Gemini integration.
+    Returns configured status, ready status, and test error if any.
     """
-    return get_ollama_status()
+    return get_gemini_status()
 
 
 from services.recommendation_engine import RecommendationEngine, build_index as build_rag_index
@@ -258,7 +258,7 @@ async def generate_quiz(payload: QuizGenerateRequest):
     Output: { "questions": [...], "metadata": {...} }
     """
     t_start = time.time()
-    metadata = {
+    metadata: dict[str, Any] = {
         "course_id": payload.course_id,
         "difficulty": payload.difficulty,
         "num_questions": payload.num_questions,
@@ -335,55 +335,25 @@ You MUST respond with ONLY valid JSON in this exact format:
 }}"""
 
     questions = None
-
-    # 2a. Try Ollama first (local, no API key needed)
+    # 2. Try Google Gemini first
     try:
-        raw = call_ollama(
+        raw = generate_with_gemini(
             prompt=quiz_prompt,
-            system="You are a quiz generator API. Generate educational multiple-choice questions. Respond with valid JSON only, no markdown code fences.",
+            system_instruction="You are a quiz generator API. Generate educational multiple-choice questions. Respond with valid JSON only, no markdown code fences.",
+            json_mode=True,
+            temperature=0.8,
         )
         if raw:
             parsed = json.loads(raw)
             questions = parsed.get("questions", [])
             if questions:
-                metadata["generation_method"] = "llm_ollama"
-                print(f"[QuizGen] Ollama generated {len(questions)} questions")
+                metadata["generation_method"] = "llm_gemini"
+                print(f"[QuizGen] Gemini generated {len(questions)} questions")
             else:
                 questions = None
     except Exception as e:
-        print(f"[QuizGen] Ollama parse error: {e}")
+        print(f"[QuizGen] Gemini error: {e}")
         questions = None
-
-    # 2b. Fall back to Google Gemini
-    if not questions:
-        api_key = os.getenv("GEMINI_API_KEY", "").strip()
-        if api_key:
-            try:
-                from google import genai
-                from google.genai import types as genai_types
-
-                client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=quiz_prompt,
-                    config=genai_types.GenerateContentConfig(
-                        system_instruction="You are a quiz generator API. Generate educational multiple-choice questions. Respond with valid JSON only, no markdown code fences.",
-                        temperature=0.8,
-                        max_output_tokens=2000,
-                        response_mime_type="application/json",
-                    ),
-                )
-
-                raw = response.text.strip()
-                if raw.startswith("```"):
-                    raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-                parsed = json.loads(raw)
-                questions = parsed.get("questions", [])
-                metadata["generation_method"] = "llm_gemini"
-
-            except Exception as e:
-                print(f"[QuizGen] Gemini error: {e}")
-                questions = None
 
     # 3. Fallback to curated questions
     if not questions:

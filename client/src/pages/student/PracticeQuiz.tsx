@@ -32,7 +32,7 @@ interface QuizResponse {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const AI_SERVICE_URL = "http://localhost:8001";
+const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://localhost:8001";
 
 const DIFFICULTY_OPTIONS = [
   { value: "beginner", label: "Beginner", desc: "Basic concepts & definitions", color: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30" },
@@ -248,9 +248,14 @@ export default function PracticeQuiz() {
             </Button>
 
             {genError && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-400">
-                <p className="font-medium">Generation failed</p>
-                <p className="text-xs mt-1 opacity-70">{genError}</p>
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm space-y-1.5">
+                <p className="font-semibold text-amber-400">AI Service Unavailable</p>
+                <p className="text-xs text-muted-foreground">
+                  The AI quiz generator requires the local AI service to be running.
+                </p>
+                <p className="text-xs font-mono bg-muted/60 px-2 py-1 rounded text-muted-foreground">
+                  cd ai-service &amp;&amp; uvicorn main:app --port 8001
+                </p>
               </div>
             )}
           </CardContent>

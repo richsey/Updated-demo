@@ -6,25 +6,25 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAdminStats } from "@/lib/api/admin";
 import { useEffect, useState } from "react";
 
-interface OllamaStatus {
-  running: boolean;
+interface GeminiStatus {
+  configured: boolean;
+  status: string;
   model: string;
-  base_url: string;
-  available_models: string[];
+  error?: string | null;
 }
 
-function OllamaStatusCard() {
-  const [status, setStatus] = useState<OllamaStatus | null>(null);
+function GeminiStatusCard() {
+  const [status, setStatus] = useState<GeminiStatus | null>(null);
   const [checking, setChecking] = useState(true);
 
   const checkStatus = async () => {
     try {
-      const res = await fetch("http://localhost:8001/ollama/status");
+      const res = await fetch("http://localhost:8001/gemini/status");
       if (!res.ok) throw new Error("bad response");
-      const data: OllamaStatus = await res.json();
+      const data: GeminiStatus = await res.json();
       setStatus(data);
     } catch {
-      setStatus({ running: false, model: "phi3", base_url: "http://localhost:11434", available_models: [] });
+      setStatus({ configured: false, status: "Offline", model: "gemini-2.5-flash", error: "AI service is unreachable" });
     } finally {
       setChecking(false);
     }
@@ -36,6 +36,8 @@ function OllamaStatusCard() {
     return () => clearInterval(interval);
   }, []);
 
+  const isReady = status?.configured && status?.status === "Ready";
+
   return (
     <Card className="border-border/60 relative overflow-hidden">
       <div className="absolute top-0 right-0 h-24 w-24 bg-violet-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl" />
@@ -46,41 +48,46 @@ function OllamaStatusCard() {
           </div>
           {checking ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : status?.running ? (
+          ) : isReady ? (
             <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 gap-1 text-xs">
-              <Wifi className="h-3 w-3" /> Running
+              <Wifi className="h-3 w-3" /> Connected
             </Badge>
           ) : (
             <Badge className="bg-red-500/15 text-red-400 border border-red-500/30 gap-1 text-xs">
-              <WifiOff className="h-3 w-3" /> Offline
+              <WifiOff className="h-3 w-3" /> {status?.status || "Unconfigured"}
             </Badge>
           )}
         </div>
 
         <p className="text-xl font-bold font-display">
-          {checking ? "—" : status?.running ? status.model : "Not running"}
+          {checking
+            ? "—"
+            : isReady
+            ? status?.model === "gemini-2.5-flash"
+              ? "Gemini 2.5 Flash"
+              : status?.model === "gemini-2.0-flash"
+              ? "Gemini 2.0 Flash"
+              : status?.model || "Gemini API"
+            : "Gemini API Unconfigured"}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">Local Ollama LLM</p>
+        <p className="text-xs text-muted-foreground mt-1">Google Gemini Cloud LLM</p>
 
-        {!checking && status?.running && status.available_models.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {status.available_models.slice(0, 4).map((m) => (
-              <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-mono">
-                {m.split(":")[0]}
-              </span>
-            ))}
+        {!checking && !isReady && (
+          <div className="mt-3 text-xs text-muted-foreground space-y-1">
+            <p>
+              Add <code className="text-violet-400 font-mono">GEMINI_API_KEY</code> to your <code className="text-violet-400 font-mono">ai-service/.env</code> file to enable cloud-based AI recommendations and quizzes.
+            </p>
+            {status?.error && (
+              <p className="text-red-400 font-mono text-[10px] bg-red-950/20 px-1.5 py-0.5 rounded border border-red-900/30 mt-1">
+                Error: {status.error}
+              </p>
+            )}
           </div>
         )}
 
-        {!checking && !status?.running && (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Run <code className="text-violet-400 font-mono">ollama serve</code> to enable local AI
-          </p>
-        )}
-
-        {!checking && status?.running && (
+        {!checking && isReady && (
           <p className="mt-2 text-[11px] text-emerald-400/80">
-            Using local AI — no cloud API needed
+            Using Google Gemini API — cloud recommendations and quiz generation enabled
           </p>
         )}
       </CardContent>
@@ -135,8 +142,8 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Ollama status card — full width below the stat grid */}
-      <OllamaStatusCard />
+      {/* Gemini status card — full width below the stat grid */}
+      <GeminiStatusCard />
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">

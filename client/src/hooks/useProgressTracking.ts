@@ -65,8 +65,7 @@ async function markMaterialCompleteViaSupabase(
   materialId: string
 ): Promise<MarkCompleteResult> {
   // 1. Mark this material as completed
-  const { error: upsertError } = await (supabase as any)
-    .from("user_material_progress")
+  const { error: upsertError } = await (supabase.from("user_material_progress") as any)
     .upsert(
       {
         user_id: userId,
@@ -99,8 +98,7 @@ async function markMaterialCompleteViaSupabase(
   const totalMaterials = materialIds.length;
 
   // 4. Count completed materials
-  const { count } = await (supabase as any)
-    .from("user_material_progress")
+  const { count } = await (supabase.from("user_material_progress") as any)
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("completed", true)
@@ -109,8 +107,7 @@ async function markMaterialCompleteViaSupabase(
   const completedMaterials = count || 0;
   const progress = totalMaterials > 0 ? Math.round((completedMaterials / totalMaterials) * 100) : 0;
 
-  // 5. Update user_course_progress
-  await (supabase as any).from("user_course_progress").upsert(
+  await (supabase.from("user_course_progress") as any).upsert(
     {
       user_id: userId,
       course_id: courseId,
@@ -120,10 +117,10 @@ async function markMaterialCompleteViaSupabase(
       last_updated: new Date().toISOString(),
     },
     { onConflict: "user_id,course_id" }
-  );
+  ).catch(() => {});
 
-  // 6. Update student_progress (compatibility)
-  await (supabase as any).from("student_progress").upsert(
+  // 6. Mirror to student_progress (legacy table still read by some queries)
+  await (supabase.from("student_progress") as any).upsert(
     {
       user_id: userId,
       course_id: courseId,
@@ -132,7 +129,7 @@ async function markMaterialCompleteViaSupabase(
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,course_id" }
-  ).catch(() => {});
+  ).catch(() => {}); // non-critical — don't block if this fails
 
   // 7. Find next material & recommendation
   let nextMaterial: AIRecommendation["recommended_next_material"] = null;
@@ -143,8 +140,7 @@ async function markMaterialCompleteViaSupabase(
       .eq("course_id", courseId)
       .order("created_at", { ascending: true });
 
-    const { data: completedRows } = await (supabase as any)
-      .from("user_material_progress")
+    const { data: completedRows } = await (supabase.from("user_material_progress") as any)
       .select("material_id")
       .eq("user_id", userId)
       .eq("completed", true);
@@ -212,24 +208,21 @@ export async function fetchCourseProgressAPI(
   userId: string,
   courseId: string
 ): Promise<CourseProgressData> {
-  // Try direct Supabase first (fast and always available)
-  const { data } = await (supabase as any)
-    .from("user_course_progress")
+  const { data } = await (supabase.from("user_course_progress") as any)
     .select("progress, completed_materials, total_materials, last_updated")
     .eq("user_id", userId)
     .eq("course_id", courseId)
-    .single();
+    .maybeSingle();
 
   if (data) {
     return {
-      progress: data.progress ?? 0,
-      completed_materials: data.completed_materials ?? 0,
-      total_materials: data.total_materials ?? 0,
-      last_updated: data.last_updated ?? null,
+      progress: (data as any).progress ?? 0,
+      completed_materials: (data as any).completed_materials ?? 0,
+      total_materials: (data as any).total_materials ?? 0,
+      last_updated: (data as any).last_updated ?? null,
     };
   }
 
-  // Fallback: no data yet
   return { progress: 0, completed_materials: 0, total_materials: 0, last_updated: null };
 }
 
@@ -246,15 +239,14 @@ export async function fetchCompletedMaterialsAPI(
   const materialIds = (materials || []).map((m: any) => m.id);
   if (materialIds.length === 0) return [];
 
-  // Get completed ones
-  const { data: completed } = await (supabase as any)
-    .from("user_material_progress")
+  // Get completed ones from user_material_progress
+  const { data: completed } = await (supabase.from("user_material_progress") as any)
     .select("material_id")
     .eq("user_id", userId)
     .eq("completed", true)
     .in("material_id", materialIds);
 
-  return (completed || []).map((c: any) => c.material_id);
+  return (completed as any[] || []).map((c: any) => c.material_id);
 }
 
 // ─── React Hook ───────────────────────────────────────────────────────────────

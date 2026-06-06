@@ -22,6 +22,7 @@ import {
   updateMaterialProgress,
 } from "@/lib/api/progress";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCallback } from "react";
 
 // ─── Courses ─────────────────────────────────────────────────
 export function useCourses(options?: { skip?: boolean }) {
@@ -221,7 +222,7 @@ export function usePrefetchCriticalData() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const prefetch = async () => {
+  const prefetch = useCallback(async () => {
     try {
       console.log("[Prefetch] Loading critical data...");
       const startTime = performance.now();
@@ -256,7 +257,7 @@ export function usePrefetchCriticalData() {
     } catch (err) {
       console.error("[Prefetch] Error prefetching data:", err);
     }
-  };
+  }, [queryClient, user]);
 
   return { prefetch };
 }

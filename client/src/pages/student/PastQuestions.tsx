@@ -93,6 +93,10 @@ export default function PastQuestions() {
             <BookMarked className="h-5 w-5 text-primary" />
             <h2 className="font-bold font-display text-base">Past Questions</h2>
           </div>
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-400 leading-relaxed">
+            <span className="mt-0.5">⚠️</span>
+            <span>Sample previews only — real papers &amp; downloads coming soon.</span>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -270,12 +274,10 @@ export default function PastQuestions() {
                         </Button>
                         <Button
                           size="sm"
-                          className="gap-1.5 text-xs gradient-primary border-0 text-white h-8 shadow-md shadow-primary/20"
-                          asChild
+                          disabled
+                          className="gap-1.5 text-xs h-8 opacity-40 cursor-not-allowed"
                         >
-                          <a href={paper.files.pdf_url} download>
-                            <Download className="h-3.5 w-3.5" /> Download
-                          </a>
+                          <Download className="h-3.5 w-3.5" /> Download
                         </Button>
                       </div>
                     </div>
@@ -349,10 +351,8 @@ export default function PastQuestions() {
 
           {/* Actions */}
           <div className="p-4 border-t border-border/60 space-y-2">
-            <Button className="w-full gradient-primary border-0 text-white h-11 text-sm font-bold shadow-lg shadow-primary/20 gap-2" asChild>
-              <a href={previewPaper.files.pdf_url} download>
-                <Download className="h-4 w-4" /> Download PDF
-              </a>
+            <Button disabled className="w-full h-11 text-sm font-bold opacity-40 cursor-not-allowed gap-2">
+              <Download className="h-4 w-4" /> Download Coming Soon
             </Button>
           </div>
         </aside>

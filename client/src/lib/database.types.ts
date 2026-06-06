@@ -1,4 +1,4 @@
-// Auto-generated Supabase types — keeps full type safety across the app.
+// Auto-generated Supabase types — matches actual schema in production.
 // Run `supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts`
 // to regenerate after schema changes.
 
@@ -36,7 +36,7 @@ export type Database = {
           category: string;
           difficulty: "beginner" | "intermediate" | "advanced";
           format: "video" | "article" | "interactive";
-          estimated_minutes: number;
+          duration_minutes: number;
           thumbnail: string;
           instructor: string;
           rating: number;
@@ -50,7 +50,7 @@ export type Database = {
           category: string;
           difficulty: "beginner" | "intermediate" | "advanced";
           format: "video" | "article" | "interactive";
-          estimated_minutes: number;
+          duration_minutes?: number;
           thumbnail: string;
           instructor: string;
           rating?: number;
@@ -63,7 +63,7 @@ export type Database = {
           category?: string;
           difficulty?: "beginner" | "intermediate" | "advanced";
           format?: "video" | "article" | "interactive";
-          estimated_minutes?: number;
+          duration_minutes?: number;
           thumbnail?: string;
           instructor?: string;
           rating?: number;
@@ -87,7 +87,7 @@ export type Database = {
           title: string;
           type: "video" | "tutorial";
           url: string;
-          duration_minutes: number;
+          duration_minutes?: number;
           order_index?: number;
           created_at?: string;
         };
@@ -120,7 +120,7 @@ export type Database = {
       questions: {
         Row: {
           id: string;
-          quiz_id: string;
+          quizzes_id: string;
           text: string;
           options: string[];
           correct_index: number;
@@ -129,7 +129,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          quiz_id: string;
+          quizzes_id: string;
           text: string;
           options: string[];
           correct_index: number;
@@ -160,7 +160,7 @@ export type Database = {
           quiz_id: string;
           score: number;
           total_questions: number;
-          duration_seconds: number;
+          duration_seconds?: number;
           created_at?: string;
         };
         Update: never;
@@ -188,25 +188,6 @@ export type Database = {
           updated_at?: string;
         };
       };
-      telemetry: {
-        Row: {
-          id: string;
-          user_id: string;
-          event_type: string;
-          entity_id: string;
-          metadata: Record<string, unknown>;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          event_type: string;
-          entity_id: string;
-          metadata?: Record<string, unknown>;
-          created_at?: string;
-        };
-        Update: never;
-      };
       material_progress: {
         Row: {
           id: string;
@@ -231,6 +212,132 @@ export type Database = {
           time_spent_seconds?: number;
           completed?: boolean;
           updated_at?: string;
+        };
+      };
+      user_material_progress: {
+        Row: {
+          id: string;
+          user_id: string;
+          material_id: string;
+          completed: boolean | null;
+          completed_at: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          material_id: string;
+          completed?: boolean | null;
+          completed_at?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          completed?: boolean | null;
+          completed_at?: string | null;
+        };
+      };
+      user_course_progress: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          progress: number | null;
+          completed_materials: number | null;
+          total_materials: number | null;
+          last_updated: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          progress?: number | null;
+          completed_materials?: number | null;
+          total_materials?: number | null;
+          last_updated?: string | null;
+        };
+        Update: {
+          progress?: number | null;
+          completed_materials?: number | null;
+          total_materials?: number | null;
+          last_updated?: string | null;
+        };
+      };
+      telemetry: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_type: string;
+          entity_id: string;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_type: string;
+          entity_id: string;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      content: {
+        Row: {
+          id: string;
+          title: string;
+          category: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          category: string;
+          created_at?: string;
+        };
+        Update: {
+          title?: string;
+          category?: string;
+        };
+      };
+      user_interactions: {
+        Row: {
+          id: string;
+          user_id: string;
+          content_id: string;
+          action_type: string | null;
+          rating: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content_id: string;
+          action_type?: string | null;
+          rating?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          action_type?: string | null;
+          rating?: number | null;
+        };
+      };
+      recommendations: {
+        Row: {
+          id: string;
+          user_id: string;
+          content_id: string;
+          score: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content_id: string;
+          score: number;
+          created_at?: string;
+        };
+        Update: {
+          score?: number;
         };
       };
     };

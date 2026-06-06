@@ -90,12 +90,11 @@ export default function LearningMaterial() {
     if (!user?.id || !materialId) return;
     const checkCompletion = async () => {
       const { data } = await (supabase as any).from("user_material_progress")
-        .select("completed").eq("user_id", user.id).eq("material_id", materialId).single();
-      if (data?.completed) { setIsCompleted(true); return; }
-      
-      const { data: old } = await (supabase as any).from("material_progress")
-        .select("completed, progress_pct").eq("user_id", user.id).eq("material_id", materialId).single();
-      if (old?.completed || (old?.progress_pct && old.progress_pct >= 90)) setIsCompleted(true);
+        .select("completed")
+        .eq("user_id", user.id)
+        .eq("material_id", materialId)
+        .maybeSingle();
+      if ((data as any)?.completed) setIsCompleted(true);
     };
     checkCompletion().catch(() => {});
   }, [user?.id, materialId]);

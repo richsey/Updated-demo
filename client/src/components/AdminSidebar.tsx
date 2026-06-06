@@ -1,4 +1,4 @@
-import { LayoutDashboard, Upload, FileText, ClipboardList, BarChart3, LogOut, Brain, BookOpen } from "lucide-react";
+import { LayoutDashboard, Upload, FileText, ClipboardList, BarChart3, LogOut, Brain, BookOpen, ListChecks } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import {
@@ -20,6 +20,7 @@ const items = [
   { title: "Upload Course", url: "/admin/upload-course", icon: Upload },
   { title: "Upload Material", url: "/admin/upload-material", icon: FileText },
   { title: "Create Quiz", url: "/admin/create-quiz", icon: ClipboardList },
+  { title: "Manage Questions", url: "/admin/manage-questions", icon: ListChecks },
   { title: "Student Analytics", url: "/admin/analytics", icon: BarChart3 },
 ];
 

@@ -671,41 +671,42 @@ You MUST respond with ONLY valid JSON in this exact format, no other text:
 
 # ── LLM Generation ─────────────────────────────────────────────────────────────
 
-def _generate_with_ollama(prompt: str) -> Optional[Dict[str, Any]]:
-    """Send the prompt to Ollama Gemma and parse the JSON response."""
+def _generate_with_gemini(prompt: str) -> Optional[Dict[str, Any]]:
+    """Send the prompt to Gemini 2.0 Flash and parse the JSON response."""
     try:
-        from services.ollama_service import generate as ollama_generate
+        from services.gemini_service import generate_with_gemini
     except ImportError:
         try:
-            from ollama_service import generate as ollama_generate
+            from gemini_service import generate_with_gemini
         except ImportError:
-            logger.warning("ollama_service not importable — skipping LLM generation")
+            logger.warning("gemini_service not importable — skipping LLM generation")
             return None
 
-    logger.info("[AI] Calling Ollama...")
+    logger.info("[AI] Calling Gemini...")
     t0 = time.time()
 
-    raw = ollama_generate(
+    raw = generate_with_gemini(
         prompt=prompt,
-        system=(
+        system_instruction=(
             "You are a JSON-only API for an educational platform. "
             "Return valid JSON only. No markdown, no explanation, no code fences."
         ),
+        json_mode=True,
         temperature=0.5,
     )
 
     if not raw:
-        logger.warning("Ollama returned no content")
+        logger.warning("Gemini returned no content")
         return None
 
     elapsed = time.time() - t0
-    logger.info(f"[AI] Ollama responded in {elapsed:.2f}s ({len(raw)} chars)")
+    logger.info(f"[AI] Gemini responded in {elapsed:.2f}s ({len(raw)} chars)")
 
     try:
         result = json.loads(raw)
         recs = result.get("recommendations", [])
         if not recs:
-            logger.warning("Ollama JSON had no 'recommendations' key or empty list")
+            logger.warning("Gemini JSON had no 'recommendations' key or empty list")
             return None
         # Ensure priority field is present and integer
         for i, rec in enumerate(recs):
@@ -714,7 +715,7 @@ def _generate_with_ollama(prompt: str) -> Optional[Dict[str, Any]]:
         logger.info(f"[AI] Recommendations generated. ({len(recs)} items)")
         return result
     except json.JSONDecodeError as exc:
-        logger.warning(f"Ollama JSON parse error: {exc} | raw={raw[:200]}")
+        logger.warning(f"Gemini JSON parse error: {exc} | raw={raw[:200]}")
         return None
 
 
@@ -907,12 +908,12 @@ class RecommendationEngine:
                 },
             }
 
-        # ── Step 5 + 6: Build prompt → call Ollama → fallback ──
+        # ── Step 5 + 6: Build prompt → call Gemini → fallback ──
         prompt = _build_prompt(analysis, candidates)
-        result = _generate_with_ollama(prompt)
+        result = _generate_with_gemini(prompt)
 
         if result is not None:
-            metadata["generation_method"] = "llm_ollama_gemma"
+            metadata["generation_method"] = "llm_gemini"
         else:
             # Fallback: rule-based ranking using lowest quiz scores + incomplete materials
             result = _generate_fallback(analysis, candidates)

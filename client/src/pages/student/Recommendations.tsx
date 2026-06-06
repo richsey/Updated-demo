@@ -46,7 +46,7 @@ interface RAGResponse {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const AI_SERVICE_URL = "http://localhost:8001";
+const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://localhost:8001";
 
 // ─── Helper Components ───────────────────────────────────────────────────────
 
@@ -254,7 +254,9 @@ export default function Recommendations() {
               <h2 className="font-bold font-display text-base">AI-Recommended Resources</h2>
                         {ragData?.metadata?.generation_method && (
                 <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground border-border/40">
-                  {ragData.metadata.generation_method === "llm_ollama_gemma"
+                  {ragData.metadata.generation_method === "llm_gemini"
+                    ? "Gemini 2.0 ✨"
+                    : ragData.metadata.generation_method === "llm_ollama_gemma"
                     ? "Gemma ✨"
                     : ragData.metadata.generation_method === "llm"
                     ? "AI Engine"

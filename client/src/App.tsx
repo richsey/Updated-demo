@@ -23,7 +23,7 @@ import CourseDetails from "./pages/student/CourseDetails";
 import LearningMaterial from "./pages/student/LearningMaterial";
 import QuizList from "./pages/student/QuizList";
 import QuizPage from "./pages/student/QuizPage";
-import QuizResult from "./pages/student/QuizResult";
+
 import Recommendations from "./pages/student/Recommendations";
 import Progress from "./pages/student/Progress";
 import PastQuestions from "./pages/student/PastQuestions";
@@ -35,6 +35,7 @@ import ManageCourses from "./pages/admin/ManageCourses";
 import UploadCourse from "./pages/admin/UploadCourse";
 import UploadMaterial from "./pages/admin/UploadMaterial";
 import CreateQuiz from "./pages/admin/CreateQuiz";
+import ManageQuestions from "./pages/admin/ManageQuestions";
 import StudentAnalytics from "./pages/admin/StudentAnalytics";
 
 const queryClient = new QueryClient();
@@ -61,7 +62,6 @@ const App = () => (
                 <Route path="/materials/:materialId" element={<LearningMaterial />} />
                 <Route path="/quizzes" element={<QuizList />} />
                 <Route path="/quizzes/:quizId" element={<QuizPage />} />
-                <Route path="/quizzes/:quizId/result" element={<QuizResult />} />
                 <Route path="/practice" element={<PracticeQuiz />} />
                 <Route path="/recommendations" element={<Recommendations />} />
                 <Route path="/progress" element={<Progress />} />
@@ -77,6 +77,7 @@ const App = () => (
                 <Route path="/admin/upload-course" element={<UploadCourse />} />
                 <Route path="/admin/upload-material" element={<UploadMaterial />} />
                 <Route path="/admin/create-quiz" element={<CreateQuiz />} />
+                <Route path="/admin/manage-questions" element={<ManageQuestions />} />
                 <Route path="/admin/analytics" element={<StudentAnalytics />} />
               </Route>
             </Route>

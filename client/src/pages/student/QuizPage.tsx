@@ -78,15 +78,14 @@ export default function QuizPage() {
     checkProgress();
 
     // Check step-back lock via Supabase telemetry
-    supabase
-      .from("telemetry")
+    (supabase.from("telemetry") as any)
       .select("metadata")
       .eq("user_id", user.id)
       .eq("event_type", "quiz_stepback")
       .eq("entity_id", quizId!)
       .order("created_at", { ascending: false })
       .limit(1)
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data && data.length > 0) {
           const prereqCourseId = (data[0].metadata as any)?.prereqCourseId;
           if (prereqCourseId) {
@@ -254,12 +253,12 @@ export default function QuizPage() {
             .from("courses")
             .select("id")
             .eq("title", prereqCourseName)
-            .single();
+            .maybeSingle();
 
-          const prereqCourseId = prereqCourse?.id ?? quiz.course_id;
+          const prereqCourseId = (prereqCourse as any)?.id ?? quiz.course_id;
 
           // Store step-back in Supabase telemetry
-          await supabase.from("telemetry").insert({
+          await (supabase.from("telemetry") as any).insert({
             user_id: user.id,
             event_type: "quiz_stepback",
             entity_id: quiz.id,

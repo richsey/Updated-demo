@@ -195,8 +195,8 @@ export default function Login() {
               </Link>
             </p>
             <div className="glass rounded-xl px-4 py-3 text-xs text-muted-foreground">
-              💡 Use <code className="text-primary font-mono">admin@</code> in
-              your email to access the admin dashboard
+              💡 Use <code className="text-primary font-mono">example@admin.com</code> to
+              access the admin dashboard
             </div>
           </div>
         </div>

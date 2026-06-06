@@ -16,7 +16,7 @@ export default function StudentLayout() {
   // ── Global session-wide time tracker ───────────────────────────
   const telemetry = useTelemetry({ endpoint: "/api/telemetry" });
 
-  // Prefetch critical data on layout mount
+  // Prefetch critical data once on layout mount (after auth resolves)
   useEffect(() => {
     prefetch();
   }, [prefetch]);
