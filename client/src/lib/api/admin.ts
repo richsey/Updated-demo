@@ -99,3 +99,75 @@ export async function fetchAllTelemetry(limit = 100) {
   if (error) throw error;
   return data ?? [];
 }
+
+// ─── Student Detail ───────────────────────────────────────────────────────────
+
+export interface StudentCourseEnrollment {
+  courseId: string;
+  courseTitle: string;
+  category: string;
+  progress: number; // 0-100
+}
+
+export interface StudentDetail {
+  id: string;
+  fullName: string;
+  email: string;
+  courses: StudentCourseEnrollment[];
+}
+
+/**
+ * Fetch all students with the list of courses they're enrolled in and their progress.
+ */
+export async function fetchStudentsWithCourses(): Promise<StudentDetail[]> {
+  // 1. Get all student profiles
+  const { data: profiles, error: profErr } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role", "student")
+    .order("full_name", { ascending: true });
+
+  if (profErr) throw profErr;
+  if (!profiles || profiles.length === 0) return [];
+
+  // 2. Get all progress records joined with course info
+  const { data: progressRows, error: progErr } = await supabase
+    .from("user_course_progress")
+    .select("user_id, course_id, progress, courses(title, category)")
+    .order("created_at", { ascending: false });
+
+  // Fallback to student_progress table if user_course_progress doesn't exist
+  const progressData = progressRows ?? [];
+  const progressError = progErr;
+
+  // If first table failed, try the other common table name
+  let finalProgress: any[] = progressData;
+  if (progressError || progressData.length === 0) {
+    const { data: fallback } = await supabase
+      .from("student_progress")
+      .select("user_id, course_id, progress, courses(title, category)");
+    finalProgress = fallback ?? [];
+  }
+
+  // 3. Build a map: userId → list of courses
+  const progressByUser: Record<string, StudentCourseEnrollment[]> = {};
+  for (const row of finalProgress as any[]) {
+    const uid = row.user_id;
+    if (!progressByUser[uid]) progressByUser[uid] = [];
+    progressByUser[uid].push({
+      courseId: row.course_id,
+      courseTitle: row.courses?.title ?? "Unknown Course",
+      category: row.courses?.category ?? "",
+      progress: Math.round(row.progress ?? 0),
+    });
+  }
+
+  // 4. Combine profiles with their courses
+  return profiles.map((p: any) => ({
+    id: p.id,
+    fullName: p.full_name || p.email || "Unknown",
+    email: p.email || "",
+    courses: progressByUser[p.id] ?? [],
+  }));
+}
+

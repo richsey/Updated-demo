@@ -36,13 +36,41 @@ export async function fetchCourseProgress(userId: string, courseId: string) {
 export async function updateCourseProgress(
   userId: string,
   courseId: string,
-  progress: number
+  progress: number,
+  completedMaterials?: number,
+  totalMaterials?: number
 ) {
+  let finalCompleted = completedMaterials;
+  let finalTotal = totalMaterials;
+
+  if (finalCompleted === undefined || finalTotal === undefined) {
+    const { data: materials } = await supabase
+      .from("materials")
+      .select("id")
+      .eq("course_id", courseId);
+    
+    if (materials && materials.length > 0) {
+      finalTotal = materials.length;
+      const materialIds = materials.map((m: any) => m.id);
+      const { count } = await (supabase.from("user_material_progress") as any)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("completed", true)
+        .in("material_id", materialIds);
+      finalCompleted = count || 0;
+    } else {
+      finalCompleted = 0;
+      finalTotal = 0;
+    }
+  }
+
   const { error } = await (supabase.from("user_course_progress") as any).upsert(
     {
       user_id: userId,
       course_id: courseId,
       progress: Math.min(100, Math.max(0, progress)),
+      completed_materials: finalCompleted,
+      total_materials: finalTotal,
       last_updated: new Date().toISOString(),
     },
     { onConflict: "user_id,course_id" }
@@ -113,7 +141,7 @@ export async function syncCourseProgress(userId: string, courseId: string) {
   const completedCount = count || 0;
   const progress = Math.round((completedCount / materialIds.length) * 100);
 
-  await updateCourseProgress(userId, courseId, progress);
+  await updateCourseProgress(userId, courseId, progress, completedCount, materialIds.length);
 
   return { progress, completed_materials: completedCount, total_materials: materialIds.length };
 }

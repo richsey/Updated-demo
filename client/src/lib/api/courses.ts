@@ -112,8 +112,9 @@ export async function fetchMaterialById(materialId: string) {
   return data;
 }
 
-// Invalidate courses cache when needed
+// Invalidate all courses-related cache entries (both list and individual records)
 export async function invalidateCoursesCache() {
-  await CacheManager.clear("course_");
-  console.log("[Courses] Cache invalidated");
+  await CacheManager.clear(COURSES_CACHE_KEY);   // clear the full list cache
+  await CacheManager.clear("course_");            // clear per-course detail caches
+  console.log("[Courses] Cache invalidated (all)");
 }

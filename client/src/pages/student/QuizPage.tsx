@@ -11,7 +11,7 @@ import { useQuiz, useSaveQuizAttempt } from "@/hooks/useSupabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
-import { computeCourseProgress } from "@/lib/api/progress";
+import { computeCourseProgress, syncCourseProgress } from "@/lib/api/progress";
 import { fetchCourseProgressAPI } from "@/hooks/useProgressTracking";
 import type { Database } from "@/lib/database.types";
 
@@ -55,25 +55,14 @@ export default function QuizPage() {
 
     // Check course progress gate
     const checkProgress = async () => {
-      // Try new progress system first
       try {
-        const progData = await fetchCourseProgressAPI(user.id, quiz.course_id);
-        if (progData.total_materials > 0) {
-          setProgressPct(Math.round(progData.progress));
-          if (progData.progress < 100) setAccessDenied(true);
-          return;
-        }
-      } catch {
-        // fallback below
+        const { progress } = await syncCourseProgress(user.id, quiz.course_id);
+        setProgressPct(progress);
+        if (progress < 100) setAccessDenied(true);
+      } catch (err) {
+        console.error("Failed to check course progress:", err);
+        setAccessDenied(true);
       }
-      // Fallback to old system
-      const { data: materials } = await supabase
-        .from("materials")
-        .select("id")
-        .eq("course_id", quiz.course_id);
-      const pct = await computeCourseProgress(user.id, materials ?? []);
-      setProgressPct(pct);
-      if (pct < 100) setAccessDenied(true);
     };
     checkProgress();
 

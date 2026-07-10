@@ -49,9 +49,9 @@ export type Database = {
           description: string;
           category: string;
           difficulty: "beginner" | "intermediate" | "advanced";
-          format: "video" | "article" | "interactive";
+          format?: "video" | "article" | "interactive";
           duration_minutes?: number;
-          thumbnail: string;
+          thumbnail?: string;
           instructor: string;
           rating?: number;
           enrolled_count?: number;
@@ -75,7 +75,7 @@ export type Database = {
           id: string;
           course_id: string;
           title: string;
-          type: "video" | "tutorial";
+          type: "video" | "tutorial" | "article" | "pdf";
           url: string;
           duration_minutes: number;
           order_index: number;

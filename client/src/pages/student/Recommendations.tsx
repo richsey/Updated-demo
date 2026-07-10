@@ -19,12 +19,20 @@ interface CourseAIData {
   totalMaterials: number;
 }
 
+interface RecommendationLink {
+  url: string;
+  source: string;
+  label: string;
+}
+
 interface RAGRecommendation {
   title: string;
   reason: string;
   difficulty: string;
   priority: number;
-  // Optional — present when LLM recommends external resources
+  // Multi-source links returned by AI
+  links?: RecommendationLink[];
+  // Legacy single-link fields (kept for backward compat)
   url?: string;
   source?: string;
 }
@@ -58,6 +66,12 @@ function SourceIcon({ source }: { source: string }) {
       return <FileText className="h-4 w-4" />;
     case "freecodecamp":
       return <GraduationCap className="h-4 w-4" />;
+    case "khan_academy":
+      return <GraduationCap className="h-4 w-4" />;
+    case "wikipedia":
+      return <BookOpen className="h-4 w-4" />;
+    case "coursera":
+      return <GraduationCap className="h-4 w-4" />;
     default:
       return <ExternalLink className="h-4 w-4" />;
   }
@@ -78,19 +92,31 @@ function DifficultyBadge({ level }: { level: string }) {
   );
 }
 
-function SourceBadge({ source }: { source: string }) {
-  const colors: Record<string, string> = {
-    youtube: "text-red-400 bg-red-500/10 border-red-500/20",
-    documentation: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-    freecodecamp: "text-green-400 bg-green-500/10 border-green-500/20",
-    blog: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+function SourceBadge({ link }: { link: RecommendationLink }) {
+  const colorMap: Record<string, string> = {
+    youtube: "text-red-400 bg-red-500/10 border-red-500/20 hover:bg-red-500/20",
+    documentation: "text-blue-400 bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20",
+    freecodecamp: "text-green-400 bg-green-500/10 border-green-500/20 hover:bg-green-500/20",
+    khan_academy: "text-teal-400 bg-teal-500/10 border-teal-500/20 hover:bg-teal-500/20",
+    wikipedia: "text-slate-400 bg-slate-500/10 border-slate-500/20 hover:bg-slate-500/20",
+    coursera: "text-sky-400 bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/20",
+    investopedia: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20",
+    blog: "text-purple-400 bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20",
+    other: "text-muted-foreground bg-muted/50 border-border hover:bg-muted",
   };
-  const color = colors[source?.toLowerCase()] || "text-muted-foreground bg-muted/50 border-border";
+  const color = colorMap[link.source?.toLowerCase()] ?? colorMap.other;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${color}`}>
-      <SourceIcon source={source} />
-      {source}
-    </span>
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${color}`}
+    >
+      <SourceIcon source={link.source} />
+      {link.label}
+      <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+    </a>
   );
 }
 
@@ -302,54 +328,53 @@ export default function Recommendations() {
             </div>
           )}
 
-                    {!ragLoading && !ragError && ragData && ragData.recommendations.length > 0 && (
+          {!ragLoading && !ragError && ragData && ragData.recommendations.length > 0 && (
             <div className="grid gap-3">
               {ragData.recommendations
                 .slice()
                 .sort((a, b) => a.priority - b.priority)
-                .map((rec, idx) => (
-                <div
-                  key={idx}
-                  className="group rounded-xl border border-border/60 bg-card/80 p-4 flex flex-col sm:flex-row sm:items-start gap-3 transition-all hover:border-violet-500/40 hover:shadow-md hover:bg-card"
-                >
-                  {/* Priority Badge + Icon */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold text-sm">
-                      #{rec.priority}
-                    </div>
-                  </div>
+                .map((rec, idx) => {
+                  // Resolve links: prefer new links array, fall back to legacy url/source
+                  const links: RecommendationLink[] = rec.links && rec.links.length > 0
+                    ? rec.links
+                    : rec.url
+                      ? [{ url: rec.url, source: rec.source || "other", label: rec.source || "Open" }]
+                      : [{ url: `https://www.youtube.com/results?search_query=${encodeURIComponent(rec.title)}+tutorial`, source: "youtube", label: "YouTube Tutorial" }];
+                  const primaryLink = links[0];
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-sm group-hover:text-violet-400 transition-colors">
-                        {rec.title}
-                      </h3>
-                      {rec.url && (
-                        <a
-                          href={rec.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-violet-400 hover:text-violet-300 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                      {rec.reason}
-                    </p>
-                    <div className="flex items-center gap-2 pt-0.5">
-                      <DifficultyBadge level={rec.difficulty} />
-                      {rec.source && <SourceBadge source={rec.source} />}
-                    </div>
-                  </div>
+                  return (
+                    <div
+                      key={idx}
+                      className="group rounded-xl border border-border/60 bg-card/80 p-4 flex flex-col gap-3 transition-all hover:border-violet-500/40 hover:shadow-lg hover:bg-card"
+                    >
+                      {/* Top row: priority badge + title + difficulty */}
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold text-sm group-hover:bg-violet-500/20 transition-colors">
+                          #{rec.priority}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-sm group-hover:text-violet-400 transition-colors">
+                              {rec.title}
+                            </h3>
+                            <DifficultyBadge level={rec.difficulty} />
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-2">
+                            {rec.reason}
+                          </p>
+                        </div>
+                      </div>
 
-                  {/* Arrow */}
-                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all hidden sm:block mt-3" />
-                </div>
-              ))}
+                      {/* Source buttons row */}
+                      <div className="flex items-center gap-2 flex-wrap pl-1">
+                        <span className="text-[10px] text-muted-foreground mr-1">Learn from:</span>
+                        {links.map((link, li) => (
+                          <SourceBadge key={li} link={link} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
 

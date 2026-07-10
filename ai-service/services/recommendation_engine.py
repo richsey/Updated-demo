@@ -634,7 +634,7 @@ def _build_prompt(
     )
 
     return f"""You are an AI learning advisor for an adaptive learning platform.
-Analyze the student's learning data and recommend the most relevant materials from the list below.
+Analyze the student's learning data and recommend external resources to help them improve.
 
 STUDENT PROFILE:
 - Level: {analysis.user_level}
@@ -643,27 +643,72 @@ STUDENT PROFILE:
 - Weak areas (low quiz scores < 60%): {weak_str}
 - Strong areas (high quiz scores > 80%): {strong_str}
 
-AVAILABLE MATERIALS TO RECOMMEND FROM:
+CANDIDATE MATERIALS (from their enrolled courses):
 {topics_text if topics_text else "  (No materials retrieved — recommend general improvement)"}
 
 INSTRUCTIONS:
-- Select the {MAX_RECOMMENDATIONS} most valuable materials from the list above for this student.
-- Prioritize materials that address weak areas and match the student's level.
-- Do NOT recommend materials the student has already completed.
+- Select the {MAX_RECOMMENDATIONS} most valuable topics from the candidate list above.
+- For each topic, find 2-3 DIFFERENT external resources from DIFFERENT platforms.
+- Prioritize topics that address the student's weak areas and match their level.
 - For each recommendation provide:
-  * title: exact material title from the list
-  * reason: 1-2 sentence personalized explanation referencing their specific weak areas or level
-  * difficulty: beginner | intermediate | advanced (match to student level: {analysis.user_level})
+  * title: descriptive title for this topic (e.g. "Understanding Photosynthesis")
+  * reason: 1-2 sentence personalized explanation referencing their weak areas or level
+  * difficulty: beginner | intermediate | advanced (match student level: {analysis.user_level})
   * priority: integer 1-{MAX_RECOMMENDATIONS} (1 = most important)
+  * links: array of 2-3 objects, each with:
+      - url: a REAL working URL to an external resource
+      - source: platform name (youtube | documentation | freecodecamp | khan_academy | wikipedia | coursera | investopedia | other)
+      - label: short descriptive label for the link (e.g. "YouTube Tutorial", "Khan Academy", "Wikipedia Overview")
+
+URL GUIDELINES by subject category:
+- Math/Statistics/Calculus:
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+tutorial
+    Khan Academy: https://www.khanacademy.org/search?page_search_query=TOPIC
+    Wikipedia: https://en.wikipedia.org/wiki/TOPIC
+- Science (Physics/Chemistry/Biology):
+    Khan Academy: https://www.khanacademy.org/search?page_search_query=TOPIC
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+explained
+    Wikipedia: https://en.wikipedia.org/wiki/TOPIC
+- Programming/Web Dev:
+    freeCodeCamp: https://www.freecodecamp.org/news/search/?query=TOPIC
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+tutorial
+    MDN Docs: https://developer.mozilla.org/en-US/search?q=TOPIC
+- History/Geography/Social Studies:
+    Wikipedia: https://en.wikipedia.org/wiki/TOPIC
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+history+documentary
+    Khan Academy: https://www.khanacademy.org/search?page_search_query=TOPIC
+- Business/Economics/Finance:
+    Investopedia: https://www.investopedia.com/search?q=TOPIC
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+explained
+    Coursera: https://www.coursera.org/search?query=TOPIC
+- Health/Medicine/Nutrition:
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+health
+    Wikipedia: https://en.wikipedia.org/wiki/TOPIC
+    Khan Academy: https://www.khanacademy.org/search?page_search_query=TOPIC
+- Art/Music/Design:
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+tutorial
+    Coursera: https://www.coursera.org/search?query=TOPIC
+    Wikipedia: https://en.wikipedia.org/wiki/TOPIC
+- Languages/Literature:
+    YouTube: https://www.youtube.com/results?search_query=TOPIC+lesson
+    Wikipedia: https://en.wikipedia.org/wiki/TOPIC
+    Coursera: https://www.coursera.org/search?query=TOPIC
+
+REPLACE spaces in URLs with + signs (or _ for Wikipedia). Make URLs specific to the topic.
 
 You MUST respond with ONLY valid JSON in this exact format, no other text:
 {{
   "recommendations": [
     {{
-      "title": "exact title from the list above",
+      "title": "descriptive topic title",
       "reason": "personalized explanation for this student",
       "difficulty": "beginner|intermediate|advanced",
-      "priority": 1
+      "priority": 1,
+      "links": [
+        {{"url": "https://www.youtube.com/results?search_query=TOPIC+tutorial", "source": "youtube", "label": "YouTube Tutorial"}},
+        {{"url": "https://www.khanacademy.org/search?page_search_query=TOPIC", "source": "khan_academy", "label": "Khan Academy"}},
+        {{"url": "https://en.wikipedia.org/wiki/TOPIC", "source": "wikipedia", "label": "Wikipedia Overview"}}
+      ]
     }}
   ]
 }}"""
@@ -708,10 +753,33 @@ def _generate_with_gemini(prompt: str) -> Optional[Dict[str, Any]]:
         if not recs:
             logger.warning("Gemini JSON had no 'recommendations' key or empty list")
             return None
-        # Ensure priority field is present and integer
+        # Ensure required fields and types
         for i, rec in enumerate(recs):
             if "priority" not in rec or not isinstance(rec.get("priority"), int):
                 rec["priority"] = i + 1
+            # Normalise: if Gemini returned old-style url/source, convert to links array
+            if not rec.get("links"):
+                query = rec.get("title", "learning").replace(" ", "+")
+                old_url = rec.get("url", f"https://www.youtube.com/results?search_query={query}+tutorial")
+                old_src = rec.get("source", "youtube")
+                rec["links"] = [
+                    {"url": old_url, "source": old_src, "label": old_src.replace("_", " ").title()},
+                    {"url": f"https://www.youtube.com/results?search_query={query}+tutorial", "source": "youtube", "label": "YouTube Tutorial"},
+                    {"url": f"https://en.wikipedia.org/wiki/{rec.get('title','').replace(' ', '_')}", "source": "wikipedia", "label": "Wikipedia Overview"},
+                ]
+                # deduplicate by url
+                seen = set()
+                deduped = []
+                for lnk in rec["links"]:
+                    if lnk["url"] not in seen:
+                        seen.add(lnk["url"])
+                        deduped.append(lnk)
+                rec["links"] = deduped
+            else:
+                # Validate each link has required fields
+                for lnk in rec["links"]:
+                    if not lnk.get("label"):
+                        lnk["label"] = lnk.get("source", "resource").replace("_", " ").title()
         logger.info(f"[AI] Recommendations generated. ({len(recs)} items)")
         return result
     except json.JSONDecodeError as exc:
@@ -763,6 +831,81 @@ def _generate_fallback(
                     break
         return score
 
+    # Multi-source URL generators based on course category
+    def _make_links(title: str, category: str) -> List[Dict[str, str]]:
+        """Generate 3 smart external URLs from different platforms based on topic & category."""
+        query_plus = title.replace(" ", "+")
+        query_wiki = title.replace(" ", "_")
+        cat = category.lower()
+
+        if any(k in cat for k in ["math", "algebra", "calculus", "geometry", "statistic", "trigonometry"]):
+            return [
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+tutorial", "source": "youtube", "label": "YouTube Tutorial"},
+                {"url": f"https://www.khanacademy.org/search?page_search_query={query_plus}", "source": "khan_academy", "label": "Khan Academy"},
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia"},
+            ]
+        elif any(k in cat for k in ["science", "physics", "chemistry", "biology", "astronomy"]):
+            return [
+                {"url": f"https://www.khanacademy.org/search?page_search_query={query_plus}", "source": "khan_academy", "label": "Khan Academy"},
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+explained", "source": "youtube", "label": "YouTube Explained"},
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia"},
+            ]
+        elif any(k in cat for k in ["history", "geography", "political", "sociology", "anthropology", "civilization"]):
+            return [
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia"},
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+history+documentary", "source": "youtube", "label": "YouTube Documentary"},
+                {"url": f"https://www.khanacademy.org/search?page_search_query={query_plus}", "source": "khan_academy", "label": "Khan Academy"},
+            ]
+        elif any(k in cat for k in ["business", "economics", "finance", "accounting", "management", "marketing"]):
+            return [
+                {"url": f"https://www.investopedia.com/search?q={query_plus}", "source": "investopedia", "label": "Investopedia"},
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+explained", "source": "youtube", "label": "YouTube Explained"},
+                {"url": f"https://www.coursera.org/search?query={query_plus}", "source": "coursera", "label": "Coursera Course"},
+            ]
+        elif any(k in cat for k in ["law", "legal", "ethics", "philosophy", "logic"]):
+            return [
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia"},
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+explained", "source": "youtube", "label": "YouTube Explained"},
+                {"url": f"https://www.coursera.org/search?query={query_plus}", "source": "coursera", "label": "Coursera Course"},
+            ]
+        elif any(k in cat for k in ["frontend", "backend", "javascript", "react", "css", "html", "programming", "computer", "web", "software", "typescript", "python"]):
+            return [
+                {"url": f"https://www.freecodecamp.org/news/search/?query={query_plus}", "source": "freecodecamp", "label": "freeCodeCamp"},
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+tutorial", "source": "youtube", "label": "YouTube Tutorial"},
+                {"url": f"https://developer.mozilla.org/en-US/search?q={query_plus}", "source": "documentation", "label": "MDN Docs"},
+            ]
+        elif any(k in cat for k in ["data", "machine learning", "ai", "artificial intelligence", "deep learning", "neural"]):
+            return [
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+tutorial", "source": "youtube", "label": "YouTube Tutorial"},
+                {"url": f"https://www.coursera.org/search?query={query_plus}", "source": "coursera", "label": "Coursera Course"},
+                {"url": f"https://www.freecodecamp.org/news/search/?query={query_plus}", "source": "freecodecamp", "label": "freeCodeCamp"},
+            ]
+        elif any(k in cat for k in ["health", "nutrition", "fitness", "medicine", "anatomy", "psychology"]):
+            return [
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+explained", "source": "youtube", "label": "YouTube Explained"},
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia"},
+                {"url": f"https://www.khanacademy.org/search?page_search_query={query_plus}", "source": "khan_academy", "label": "Khan Academy"},
+            ]
+        elif any(k in cat for k in ["art", "music", "design", "photography", "film", "creative"]):
+            return [
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+tutorial", "source": "youtube", "label": "YouTube Tutorial"},
+                {"url": f"https://www.coursera.org/search?query={query_plus}", "source": "coursera", "label": "Coursera Course"},
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia"},
+            ]
+        elif any(k in cat for k in ["language", "english", "literature", "writing", "linguistics", "grammar"]):
+            return [
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+lesson", "source": "youtube", "label": "YouTube Lesson"},
+                {"url": f"https://www.coursera.org/search?query={query_plus}", "source": "coursera", "label": "Coursera Course"},
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia"},
+            ]
+        else:
+            # Generic fallback: YouTube + Wikipedia + Khan Academy
+            return [
+                {"url": f"https://www.youtube.com/results?search_query={query_plus}+tutorial", "source": "youtube", "label": "YouTube Tutorial"},
+                {"url": f"https://en.wikipedia.org/wiki/{query_wiki}", "source": "wikipedia", "label": "Wikipedia Overview"},
+                {"url": f"https://www.khanacademy.org/search?page_search_query={query_plus}", "source": "khan_academy", "label": "Khan Academy"},
+            ]
+
     ranked = sorted(candidates, key=_rank_score, reverse=True)[:MAX_RECOMMENDATIONS]
 
     recs = []
@@ -770,6 +913,7 @@ def _generate_fallback(
         weak_str = (
             ", ".join(analysis.weak_topics[:2]) if analysis.weak_topics else "key topics"
         )
+        links = _make_links(c["title"], c.get("course_category", ""))
         recs.append(
             {
                 "title": c["title"],
@@ -780,6 +924,7 @@ def _generate_fallback(
                 ),
                 "difficulty": c.get("course_difficulty", analysis.user_level),
                 "priority": i + 1,
+                "links": links,
             }
         )
 

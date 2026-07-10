@@ -8,8 +8,11 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCoursesCache } from "@/lib/api/courses";
 
 export default function UploadMaterial() {
+  const queryClient = useQueryClient();
   const { data: courses = [], isLoading: loadingCourses } = useCourses();
   const [courseId, setCourseId] = useState("");
   const [matType, setMatType] = useState("");
@@ -17,7 +20,9 @@ export default function UploadMaterial() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!courseId || !matType) { toast.error("Please fill in all required fields."); return; }
+    if (!courseId) { toast.error("Please select a course."); return; }
+    if (!matType) { toast.error("Please select a material type."); return; }
+
     const form = e.currentTarget;
     const data = new FormData(form);
     setSaving(true);
@@ -42,8 +47,18 @@ export default function UploadMaterial() {
     });
 
     setSaving(false);
-    if (error) toast.error("Failed to upload material");
-    else { toast.success("Material uploaded successfully!"); form.reset(); setCourseId(""); setMatType(""); }
+    if (error) {
+      toast.error("Failed to upload material: " + error.message);
+    } else {
+      toast.success("Material uploaded successfully!");
+      // Bust caches so the student portal immediately shows the new material
+      await invalidateCoursesCache();
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+      form.reset();
+      setCourseId("");
+      setMatType("");
+    }
   };
 
   return (
@@ -61,13 +76,16 @@ export default function UploadMaterial() {
               <Select value={courseId} onValueChange={setCourseId}>
                 <SelectTrigger><SelectValue placeholder={loadingCourses ? "Loading..." : "Select course"} /></SelectTrigger>
                 <SelectContent>
-                  {courses.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  {courses.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {!loadingCourses && courses.length === 0 && (
+                <p className="text-xs text-destructive">No courses found. Create a course first.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="title">Material Title</Label>
-              <Input id="title" name="title" placeholder="e.g. Introduction to Hooks" required />
+              <Input id="title" name="title" placeholder="e.g. Introduction to the Topic" required />
             </div>
             <div className="space-y-2">
               <Label>Material Type</Label>
@@ -76,11 +94,13 @@ export default function UploadMaterial() {
                 <SelectContent>
                   <SelectItem value="video">Video</SelectItem>
                   <SelectItem value="tutorial">Interactive Tutorial</SelectItem>
+                  <SelectItem value="article">Article / Reading</SelectItem>
+                  <SelectItem value="pdf">PDF Document</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="url">URL</Label>
+              <Label htmlFor="url">URL (optional)</Label>
               <Input id="url" name="url" placeholder="https://..." />
             </div>
             <div className="space-y-2">

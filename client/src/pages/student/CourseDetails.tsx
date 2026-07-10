@@ -20,52 +20,21 @@ export default function CourseDetails() {
   const { data: courseData, isLoading } = useCourse(courseId);
   const course = courseData as any;
   const { data: quiz } = useQuizByCourse(courseId);
-const [progress, setProgress] = useState(0);
-  const [completedCount, setCompletedCount] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
   const [completedMaterialIds, setCompletedMaterialIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!user?.id || !course?.id || !course.materials) return;
+    if (!user?.id || !course?.id) return;
 
-    // Initial local compute for instant UI
-    computeCourseProgress(user.id, course.materials).then(setProgress);
+    const fetchCompletion = () => {
+      fetchCompletedMaterialsAPI(user.id, course.id)
+        .then((ids) => setCompletedMaterialIds(new Set(ids)))
+        .catch(console.error);
+    };
 
-    // Sync with server for authoritative progress
+    fetchCompletion();
     syncCourseProgress(user.id, course.id).catch(console.error);
 
-    // Fetch material-level completion data
-    fetchCourseProgressAPI(user.id, course.id)
-      .then((data) => {
-        setCompletedCount(data.completed_materials);
-        setTotalCount(data.total_materials);
-        const newProgress = data.total_materials > 0 
-          ? Math.round((data.completed_materials / data.total_materials) * 100) 
-          : 0;
-        setProgress(newProgress);
-      })
-      .catch(console.error);
-
-    fetchCompletedMaterialsAPI(user.id, course.id)
-      .then((ids) => setCompletedMaterialIds(new Set(ids)))
-      .catch(console.error);
-  }, [user?.id, course]);
-
-  // Periodic sync every 30s for realtime updates
-  useEffect(() => {
-    if (!user?.id || !course?.id) return;
-    const interval = setInterval(() => {
-      fetchCourseProgressAPI(user.id, course.id)
-        .then((data) => {
-          setCompletedCount(data.completed_materials);
-          setTotalCount(data.total_materials);
-          const newProgress = data.total_materials > 0 
-            ? Math.round((data.completed_materials / data.total_materials) * 100) 
-            : 0;
-          setProgress(newProgress);
-        })
-        .catch(console.error);
-    }, 30000);
+    const interval = setInterval(fetchCompletion, 10000); // check completion every 10s
     return () => clearInterval(interval);
   }, [user?.id, course?.id]);
 
@@ -87,8 +56,11 @@ const [progress, setProgress] = useState(0);
     );
   }
 
-  const progressColor = progress >= 80 ? "hsl(var(--primary))" : progress >= 50 ? "hsl(38 95% 56%)" : "hsl(var(--muted-foreground) / 0.5)";
   const materials = course.materials ?? [];
+  const totalCount = materials.length;
+  const completedCount = materials.filter((m: any) => completedMaterialIds.has(m.id)).length;
+  const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const progressColor = progress >= 80 ? "hsl(var(--primary))" : progress >= 50 ? "hsl(38 95% 56%)" : "hsl(var(--muted-foreground) / 0.5)";
 
   return (
     <div className="space-y-8 pb-6">
