@@ -368,101 +368,114 @@ def _load_all_materials(supabase: Client) -> List[MaterialRecord]:
 
 def _load_user_data(supabase: Client, user_id: str) -> Dict[str, Any]:
     """
-    Fetch all user-specific data from Supabase:
-      - user_course_progress / student_progress
-      - user_material_progress
-      - quiz_attempts (with joined quiz + course)
-      - telemetry (non-critical)
+    Fetch all user-specific data from Supabase concurrently using a ThreadPoolExecutor.
     """
     data: Dict[str, Any] = {
         "course_progress": [],
         "material_progress": [],
         "quiz_attempts": [],
         "telemetry": [],
+        "all_material_ids": set(),
     }
 
-    # 1. Course-level progress
-    for table in ("user_course_progress", "student_progress"):
-        try:
-            resp = (
-                supabase.table(table)
-                .select("*")
-                .eq("user_id", user_id)
-                .execute()
-            )
-            rows = resp.data or []
-            if rows:
-                data["course_progress"] = rows
-                break
-        except Exception as exc:
-            logger.debug(f"Table '{table}' not accessible: {exc}")
+    def fetch_course_progress():
+        for table in ("user_course_progress", "student_progress"):
+            try:
+                resp = (
+                    supabase.table(table)
+                    .select("course_id, progress")
+                    .eq("user_id", user_id)
+                    .execute()
+                )
+                rows = resp.data or []
+                if rows:
+                    return rows
+            except Exception as exc:
+                logger.debug(f"Table '{table}' not accessible: {exc}")
+        return []
 
-    # 2. Material-level progress
-    for table in ("user_material_progress", "material_progress"):
-        try:
-            resp = (
-                supabase.table(table)
-                .select("*")
-                .eq("user_id", user_id)
-                .execute()
-            )
-            rows = resp.data or []
-            if rows:
-                data["material_progress"] = rows
-                break
-        except Exception as exc:
-            logger.debug(f"Table '{table}' not accessible: {exc}")
+    def fetch_material_progress():
+        for table in ("user_material_progress", "material_progress"):
+            try:
+                resp = (
+                    supabase.table(table)
+                    .select("material_id, completed")
+                    .eq("user_id", user_id)
+                    .execute()
+                )
+                rows = resp.data or []
+                if rows:
+                    return rows
+            except Exception as exc:
+                logger.debug(f"Table '{table}' not accessible: {exc}")
+        return []
 
-    # 3. Quiz attempts — try with joined course data first
-    try:
-        resp = (
-            supabase.table("quiz_attempts")
-            .select("*, quizzes(title, course_id, courses(title, category))")
-            .eq("user_id", user_id)
-            .order("created_at", desc=True)
-            .execute()
-        )
-        data["quiz_attempts"] = resp.data or []
-    except Exception:
+    def fetch_quiz_attempts():
         try:
             resp = (
                 supabase.table("quiz_attempts")
-                .select("*")
+                .select("score, total_questions, quizzes(title, course_id, courses(title, category))")
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)
                 .execute()
             )
-            data["quiz_attempts"] = resp.data or []
+            return resp.data or []
+        except Exception:
+            try:
+                resp = (
+                    supabase.table("quiz_attempts")
+                    .select("score, total_questions")
+                    .eq("user_id", user_id)
+                    .order("created_at", desc=True)
+                    .execute()
+                )
+                return resp.data or []
+            except Exception as exc:
+                logger.warning(f"quiz_attempts fetch failed: {exc}")
+        return []
+
+    def fetch_all_material_ids():
+        try:
+            resp = (
+                supabase.table("materials")
+                .select("id")
+                .execute()
+            )
+            return {row["id"] for row in (resp.data or [])}
+        except Exception:
+            return set()
+
+    def fetch_telemetry():
+        try:
+            resp = (
+                supabase.table("telemetry")
+                .select("event_type, entity_id, metadata, created_at")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(200)
+                .execute()
+            )
+            return resp.data or []
         except Exception as exc:
-            logger.warning(f"quiz_attempts fetch failed: {exc}")
+            logger.debug(f"Telemetry fetch failed (non-critical): {exc}")
+        return []
 
-    # 4. Learning materials for total count
-    try:
-        resp = (
-            supabase.table("materials")
-            .select("id")
-            .execute()
-        )
-        data["all_material_ids"] = {row["id"] for row in (resp.data or [])}
-    except Exception:
-        data["all_material_ids"] = set()
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        f_course = executor.submit(fetch_course_progress)
+        f_material = executor.submit(fetch_material_progress)
+        f_quiz = executor.submit(fetch_quiz_attempts)
+        f_mat_ids = executor.submit(fetch_all_material_ids)
+        f_telemetry = executor.submit(fetch_telemetry)
 
-    # 5. Telemetry (non-critical)
-    try:
-        resp = (
-            supabase.table("telemetry")
-            .select("event_type, entity_id, metadata, created_at")
-            .eq("user_id", user_id)
-            .order("created_at", desc=True)
-            .limit(200)
-            .execute()
-        )
-        data["telemetry"] = resp.data or []
-    except Exception as exc:
-        logger.debug(f"Telemetry fetch failed (non-critical): {exc}")
+        data["course_progress"] = f_course.result()
+        data["material_progress"] = f_material.result()
+        data["quiz_attempts"] = f_quiz.result()
+        data["all_material_ids"] = f_mat_ids.result()
+        data["telemetry"] = f_telemetry.result()
 
     logger.info(
-        f"User data loaded: user={user_id[:8]}… | "
+        f"User data loaded concurrently: user={user_id[:8]}… | "
         f"courses={len(data['course_progress'])} "
         f"materials={len(data['material_progress'])} "
         f"quizzes={len(data['quiz_attempts'])} "

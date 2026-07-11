@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCourses } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Loader2, Upload, Link as LinkIcon, FileText } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateCoursesCache } from "@/lib/api/courses";
 
@@ -17,16 +17,86 @@ export default function UploadMaterial() {
   const [courseId, setCourseId] = useState("");
   const [matType, setMatType] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploadMethod, setUploadMethod] = useState<"file" | "url">("file");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [duration, setDuration] = useState("");
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Auto-populate title if empty
+      if (!title) {
+        const cleanName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        setTitle(cleanName);
+      }
+      // Auto-guess duration
+      if (!duration) {
+        if (file.type.startsWith("video/")) {
+          setDuration("10"); // placeholder for video
+        } else {
+          setDuration("5"); // placeholder for reading
+        }
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!courseId) { toast.error("Please select a course."); return; }
     if (!matType) { toast.error("Please select a material type."); return; }
+    if (uploadMethod === "url" && !url.trim()) { toast.error("Please provide a material URL."); return; }
+    if (uploadMethod === "file" && !selectedFile) { toast.error("Please select a file to upload."); return; }
 
-    const form = e.currentTarget;
-    const data = new FormData(form);
     setSaving(true);
+    let finalUrl = url;
 
+    // 1. Upload file if needed
+    if (uploadMethod === "file" && selectedFile) {
+      setUploading(true);
+      const fileExt = selectedFile.name.split(".").pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${courseId}/${fileName}`;
+
+      // Upload file to 'materials' bucket
+      let { error: uploadError } = await supabase.storage
+        .from("materials")
+        .upload(filePath, selectedFile, { cacheControl: "3600", upsert: true });
+
+      // Try creating bucket if it doesn't exist
+      if (uploadError && (uploadError.message?.includes("not found") || (uploadError as any).status === 404)) {
+        try {
+          await supabase.storage.createBucket("materials", { public: true });
+          const retry = await supabase.storage
+            .from("materials")
+            .upload(filePath, selectedFile, { cacheControl: "3600", upsert: true });
+          uploadError = retry.error;
+        } catch (bucketErr: any) {
+          uploadError = bucketErr;
+        }
+      }
+
+      if (uploadError) {
+        setUploading(false);
+        setSaving(false);
+        toast.error("File upload failed: " + uploadError.message);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("materials")
+        .getPublicUrl(filePath);
+
+      finalUrl = urlData.publicUrl;
+      setUploading(false);
+    }
+
+    // 2. Insert material record
     const maxOrder = await supabase
       .from("materials")
       .select("order_index")
@@ -36,13 +106,14 @@ export default function UploadMaterial() {
       .maybeSingle();
 
     const nextIndex = ((maxOrder.data as any)?.order_index ?? 0) + 1;
+    const dbType = matType === "video" ? "video" : "tutorial";
 
     const { error } = await (supabase.from("materials") as any).insert({
       course_id: courseId,
-      title: data.get("title") as string,
-      type: matType,
-      url: data.get("url") as string || "",
-      duration_minutes: parseInt(data.get("duration") as string || "0"),
+      title: title.trim(),
+      type: dbType,
+      url: finalUrl.trim(),
+      duration_minutes: parseInt(duration || "0"),
       order_index: nextIndex,
     });
 
@@ -51,13 +122,18 @@ export default function UploadMaterial() {
       toast.error("Failed to upload material: " + error.message);
     } else {
       toast.success("Material uploaded successfully!");
-      // Bust caches so the student portal immediately shows the new material
       await invalidateCoursesCache();
       queryClient.invalidateQueries({ queryKey: ["courses"] });
       queryClient.invalidateQueries({ queryKey: ["course", courseId] });
-      form.reset();
+      
+      // Clear form
+      setTitle("");
+      setUrl("");
+      setDuration("");
       setCourseId("");
       setMatType("");
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -83,10 +159,18 @@ export default function UploadMaterial() {
                 <p className="text-xs text-destructive">No courses found. Create a course first.</p>
               )}
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="title">Material Title</Label>
-              <Input id="title" name="title" placeholder="e.g. Introduction to the Topic" required />
+              <Input
+                id="title"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="e.g. Introduction to the Topic"
+                required
+              />
             </div>
+
             <div className="space-y-2">
               <Label>Material Type</Label>
               <Select value={matType} onValueChange={setMatType}>
@@ -99,16 +183,115 @@ export default function UploadMaterial() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Toggle Upload vs Link */}
             <div className="space-y-2">
-              <Label htmlFor="url">URL (optional)</Label>
-              <Input id="url" name="url" placeholder="https://..." />
+              <Label>Source Content</Label>
+              <div className="flex gap-2 p-1 border border-border/60 rounded-lg bg-muted/20">
+                <button
+                  type="button"
+                  onClick={() => setUploadMethod("file")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    uploadMethod === "file"
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadMethod("url")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    uploadMethod === "url"
+                      ? "bg-primary text-primary-foreground shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  Provide URL
+                </button>
+              </div>
             </div>
+
+            {uploadMethod === "file" ? (
+              <div className="space-y-2">
+                <Label>File Upload</Label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center border-2 border-dashed border-border/80 rounded-2xl p-6 bg-muted/10 hover:bg-muted/20 hover:border-primary/40 transition-all cursor-pointer group"
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept={
+                      matType === "pdf" ? ".pdf" :
+                      matType === "video" ? "video/*" :
+                      matType === "article" ? ".txt,.md,.pdf,.docx" :
+                      "*"
+                    }
+                  />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary group-hover:scale-110 transition-transform">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  {selectedFile ? (
+                    <div className="text-center mt-3 space-y-1">
+                      <p className="text-xs font-bold truncate max-w-[280px] flex items-center justify-center gap-1">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center mt-3">
+                      <p className="text-xs font-bold text-foreground">Click to select file from device</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {matType === "pdf" ? "Supports PDF format" :
+                         matType === "video" ? "Supports MP4, WebM format" :
+                         "Supports PDFs, Docs, Text or Videos"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="url">URL</Label>
+                <Input
+                  id="url"
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="duration">Duration (minutes)</Label>
-              <Input id="duration" name="duration" type="number" placeholder="15" required />
+              <Input
+                id="duration"
+                value={duration}
+                onChange={e => setDuration(e.target.value)}
+                type="number"
+                placeholder="15"
+                required
+              />
             </div>
-            <Button type="submit" className="w-full" disabled={saving}>
-              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Upload Material"}
+
+            <Button type="submit" className="w-full" disabled={saving || uploading}>
+              {saving || uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {uploading ? "Uploading File..." : "Saving..."}
+                </>
+              ) : (
+                "Upload Material"
+              )}
             </Button>
           </form>
         </CardContent>

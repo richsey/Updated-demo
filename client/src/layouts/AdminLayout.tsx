@@ -4,6 +4,7 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserProfileModal } from "@/components/UserProfileModal";
 
 export default function AdminLayout() {
   const { signOut, profile } = useAuth();
@@ -25,10 +26,17 @@ export default function AdminLayout() {
               <span className="text-sm text-muted-foreground font-display">Admin Portal</span>
             </div>
             <div className="flex items-center gap-3">
-              {profile?.full_name && (
-                <span className="text-xs text-muted-foreground hidden sm:block">
-                  {profile.full_name}
-                </span>
+              {profile && (
+                <UserProfileModal
+                  trigger={
+                    <button className="flex items-center gap-2 px-2.5 py-1 rounded-full hover:bg-muted/40 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground border border-transparent hover:border-border/40">
+                      <div className="h-6 w-6 rounded-full bg-accent/15 text-accent flex items-center justify-center font-bold">
+                        {profile.full_name ? profile.full_name[0].toUpperCase() : "A"}
+                      </div>
+                      <span className="hidden sm:inline">{profile.full_name}</span>
+                    </button>
+                  }
+                />
               )}
               <Button
                 variant="ghost"

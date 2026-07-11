@@ -32,8 +32,7 @@ export default function CreateQuiz() {
     if (!courseId) { toast.error("Please select a course"); return; }
     setSaving(true);
 
-    const { data: quiz, error } = await supabase
-      .from("quizzes")
+    const { data: quiz, error } = await (supabase.from("quizzes") as any)
       .insert({ course_id: courseId, title })
       .select()
       .single();
@@ -41,7 +40,7 @@ export default function CreateQuiz() {
     if (error || !quiz) { toast.error("Failed to create quiz"); setSaving(false); return; }
 
     const rows = questions.map((q, i) => ({
-      quiz_id: quiz.id,
+      quizzes_id: quiz.id,
       text: q.text,
       options: q.options,
       correct_index: q.correctIndex,
@@ -49,7 +48,7 @@ export default function CreateQuiz() {
       order_index: i + 1,
     }));
 
-    const { error: qErr } = await supabase.from("questions").insert(rows);
+    const { error: qErr } = await (supabase.from("questions") as any).insert(rows);
     setSaving(false);
     if (qErr) toast.error("Quiz created but questions failed to save");
     else {

@@ -187,7 +187,7 @@ export default function LearningMaterial() {
                 <div className="absolute top-0 right-0 p-8 opacity-5"><Code className="h-64 w-64 rotate-12" /></div>
                 <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-primary/10 border border-primary/20 text-primary shadow-inner"><Code className="h-10 w-10" /></div>
                 <div className="text-center space-y-3 relative z-10"><h3 className="text-3xl font-extrabold font-display">Interactive Tutorial</h3><p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">Engagement is tracked automatically once you launch the external environment.</p></div>
-                <Button asChild size="lg" className="gradient-primary border-0 glow-sm px-12 h-14 rounded-2xl text-base font-bold relative z-10" onClick={() => { if (materialId && user) { trackPdfOpen(user.id, materialId); handleMarkComplete(); } }}><a href={material.url} target="_blank" rel="noopener noreferrer">Launch Environment <ArrowRight className="ml-3 h-5 w-5" /></a></Button>
+                <Button asChild size="lg" className="gradient-primary border-0 glow-sm px-12 h-14 rounded-2xl text-base font-bold relative z-10" onClick={() => { if (materialId && user) { trackPdfOpen(user.id, materialId); handleMarkComplete(); } }}><a href={material.url} target="_blank" rel="noopener noreferrer">Launch Material <ArrowRight className="ml-3 h-5 w-5" /></a></Button>
               </div>
             )}
           </CardContent>

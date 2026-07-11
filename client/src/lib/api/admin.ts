@@ -19,7 +19,7 @@ export async function fetchAdminStats() {
 
     // Engagement: attempts per day over the last 8 days
     // TODO: Define RPC return type once function exists in Supabase
-    supabase.rpc("get_daily_engagement" as any, { days_back: 8 } as any).select("*"),
+    (supabase.rpc as any)("get_daily_engagement", { days_back: 8 }).select("*"),
 
   // Quiz performance: avg score grouped by course
   supabase
@@ -79,7 +79,7 @@ export async function fetchAdminStats() {
 export async function fetchAllStudentProgress() {
   const { data, error } = await supabase
     .from("student_progress")
-    .select("*, profiles(full_name, email), courses(title)")
+    .select("id, user_id, course_id, progress, updated_at, profiles(full_name, email), courses(title)")
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
@@ -92,7 +92,7 @@ export async function fetchAllStudentProgress() {
 export async function fetchAllTelemetry(limit = 100) {
   const { data, error } = await supabase
     .from("telemetry")
-    .select("*, profiles(full_name, email)")
+    .select("id, user_id, event_type, entity_id, metadata, created_at, profiles(full_name, email)")
     .order("created_at", { ascending: false })
     .limit(limit);
 

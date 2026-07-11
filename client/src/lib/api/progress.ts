@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
  */
 export async function fetchUserProgress(userId: string) {
   const { data, error } = await (supabase.from("user_course_progress") as any)
-    .select("*, courses(title)")
+    .select("id, user_id, course_id, progress, completed_materials, total_materials, last_updated, courses(title)")
     .eq("user_id", userId)
     .order("last_updated", { ascending: false });
 
