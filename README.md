@@ -1,4 +1,4 @@
-# DataFlow AI - Adaptive Learning Platform
+# AI Learning Recommendation Engine - Adaptive Learning Platform
 
 ## 🚀 Quick Start
 1. **Prerequisites** (below)
