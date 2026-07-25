@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 // Layouts
 import StudentLayout from "./layouts/StudentLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import LecturerLayout from "./layouts/LecturerLayout";
 
 // Student pages
 import StudentDashboard from "./pages/student/Dashboard";
@@ -23,11 +24,27 @@ import CourseDetails from "./pages/student/CourseDetails";
 import LearningMaterial from "./pages/student/LearningMaterial";
 import QuizList from "./pages/student/QuizList";
 import QuizPage from "./pages/student/QuizPage";
-
 import Recommendations from "./pages/student/Recommendations";
 import Progress from "./pages/student/Progress";
 import PastQuestions from "./pages/student/PastQuestions";
 import PracticeQuiz from "./pages/student/PracticeQuiz";
+import StudentProfile from "./pages/student/Profile";
+import StudentNotifications from "./pages/student/Notifications";
+import StudentBookmarks from "./pages/student/Bookmarks";
+import StudentCertificates from "./pages/student/Certificates";
+import StudentAnnouncements from "./pages/student/Announcements";
+
+// Lecturer pages
+import LecturerDashboard from "./pages/lecturer/Dashboard";
+import LecturerMyCourses from "./pages/lecturer/MyCourses";
+import LecturerCreateCourse from "./pages/lecturer/CreateCourse";
+import LecturerUploadMaterial from "./pages/lecturer/UploadMaterial";
+import LecturerQuizBuilder from "./pages/lecturer/QuizBuilder";
+import LecturerStudentProgress from "./pages/lecturer/StudentProgress";
+import LecturerAnalytics from "./pages/lecturer/Analytics";
+import LecturerAnnouncements from "./pages/lecturer/Announcements";
+import LecturerFeedbackInbox from "./pages/lecturer/FeedbackInbox";
+import LecturerProfile from "./pages/lecturer/Profile";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -37,6 +54,9 @@ import UploadMaterial from "./pages/admin/UploadMaterial";
 import CreateQuiz from "./pages/admin/CreateQuiz";
 import ManageQuestions from "./pages/admin/ManageQuestions";
 import StudentAnalytics from "./pages/admin/StudentAnalytics";
+import AdminManageUsers from "./pages/admin/ManageUsers";
+import AdminCourseApprovals from "./pages/admin/CourseApprovals";
+import AdminReports from "./pages/admin/Reports";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +86,27 @@ const App = () => (
                 <Route path="/recommendations" element={<Recommendations />} />
                 <Route path="/progress" element={<Progress />} />
                 <Route path="/past-questions" element={<PastQuestions />} />
+                <Route path="/profile" element={<StudentProfile />} />
+                <Route path="/notifications" element={<StudentNotifications />} />
+                <Route path="/bookmarks" element={<StudentBookmarks />} />
+                <Route path="/certificates" element={<StudentCertificates />} />
+                <Route path="/announcements" element={<StudentAnnouncements />} />
+              </Route>
+            </Route>
+
+            {/* Lecturer — requires lecturer role */}
+            <Route element={<ProtectedRoute requiredRole="lecturer" />}>
+              <Route element={<LecturerLayout />}>
+                <Route path="/lecturer" element={<LecturerDashboard />} />
+                <Route path="/lecturer/courses" element={<LecturerMyCourses />} />
+                <Route path="/lecturer/courses/new" element={<LecturerCreateCourse />} />
+                <Route path="/lecturer/materials" element={<LecturerUploadMaterial />} />
+                <Route path="/lecturer/quizzes" element={<LecturerQuizBuilder />} />
+                <Route path="/lecturer/students" element={<LecturerStudentProgress />} />
+                <Route path="/lecturer/analytics" element={<LecturerAnalytics />} />
+                <Route path="/lecturer/announcements" element={<LecturerAnnouncements />} />
+                <Route path="/lecturer/feedback" element={<LecturerFeedbackInbox />} />
+                <Route path="/lecturer/profile" element={<LecturerProfile />} />
               </Route>
             </Route>
 
@@ -79,6 +120,9 @@ const App = () => (
                 <Route path="/admin/create-quiz" element={<CreateQuiz />} />
                 <Route path="/admin/manage-questions" element={<ManageQuestions />} />
                 <Route path="/admin/analytics" element={<StudentAnalytics />} />
+                <Route path="/admin/users" element={<AdminManageUsers />} />
+                <Route path="/admin/approvals" element={<AdminCourseApprovals />} />
+                <Route path="/admin/reports" element={<AdminReports />} />
               </Route>
             </Route>
 

@@ -13,7 +13,7 @@ export default function Progress() {
   const quizTrend = attempts.slice().reverse().map((a) => ({
     date: new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     score: Math.round((a.score / a.total_questions) * 100),
-    course: (a as any).quizzes?.courses?.title ?? "",
+    course: (a.quizzes as { courses?: { title?: string } } | null)?.courses?.title ?? "",
   }));
 
   const avgScore = attempts.length > 0
@@ -35,7 +35,7 @@ export default function Progress() {
         </div>
         <div className="glass rounded-xl border border-accent/20 px-4 py-2.5 flex items-center gap-2 text-sm">
           <TrendingUp className="h-4 w-4 text-accent" />
-          <span>Avg score: <span className="font-bold text-accent">{avgScore}%</span></span>
+          <span>Average score: <span className="font-bold text-accent">{avgScore}%</span></span>
         </div>
         <div className="glass rounded-xl border border-blue-400/20 px-4 py-2.5 flex items-center gap-2 text-sm">
           <Calendar className="h-4 w-4 text-blue-400" />
@@ -99,7 +99,7 @@ export default function Progress() {
                     <span className="text-3xl">📚</span><span>No courses started yet</span>
                   </div>
                 ) : (
-                  progressData.map((p: any) => (
+                  progressData.map((p) => (
                     <div key={p.course_id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Link to={`/courses/${p.course_id}`} className="text-sm font-medium hover:text-primary transition-colors truncate mr-4">
@@ -109,7 +109,7 @@ export default function Progress() {
                           <span className="text-xs text-muted-foreground">
                             {p.completed_materials ?? "?"}/{p.total_materials ?? "?"} done
                           </span>
-                          <span className={`text-sm font-bold ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-amber-400" : "text-muted-foreground"}`}>
+                          <span className={`text-sm font-bold ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>
                             {p.progress}%
                           </span>
                         </div>
@@ -127,7 +127,7 @@ export default function Progress() {
                         />
                       </div>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> Last accessed: {new Date(p.last_accessed).toLocaleDateString()}
+                        <Calendar className="h-3 w-3" /> Last accessed: {new Date(p.last_updated ?? Date.now()).toLocaleDateString()}
                       </p>
                     </div>
                   ))
@@ -162,7 +162,7 @@ export default function Progress() {
                             {passed ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                           </div>
                           <div>
-                            <p className="font-semibold text-sm">{(a as any).quizzes?.courses?.title ?? (a as any).quizzes?.title ?? "Quiz"}</p>
+                            <p className="font-semibold text-sm">{(a.quizzes as { courses?: { title?: string }; title?: string } | null)?.courses?.title ?? (a.quizzes as { title?: string } | null)?.title ?? "Quiz"}</p>
                             <p className="text-xs text-muted-foreground">
                               {new Date(a.created_at).toLocaleDateString()} · {a.duration_seconds}s
                             </p>

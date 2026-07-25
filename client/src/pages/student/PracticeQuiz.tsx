@@ -26,7 +26,7 @@ interface QuizResponse {
     difficulty: string;
     generation_method: string;
     elapsed_seconds: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -35,16 +35,16 @@ interface QuizResponse {
 const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://localhost:8001";
 
 const DIFFICULTY_OPTIONS = [
-  { value: "beginner", label: "Beginner", desc: "Basic concepts & definitions", color: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30" },
-  { value: "intermediate", label: "Intermediate", desc: "Application & understanding", color: "text-amber-400 bg-amber-500/15 border-amber-500/30" },
-  { value: "advanced", label: "Advanced", desc: "Analysis & edge cases", color: "text-rose-400 bg-rose-500/15 border-rose-500/30" },
+  { value: "beginner", label: "Beginner", desc: "Basic concepts & definitions", color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+  { value: "intermediate", label: "Intermediate", desc: "Application & understanding", color: "text-amber-700 bg-amber-50 border-amber-200" },
+  { value: "advanced", label: "Advanced", desc: "Analysis & edge cases", color: "text-rose-700 bg-rose-50 border-rose-200" },
 ];
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function PracticeQuiz() {
   const { data: rawCourses = [], isLoading: loadingCourses } = useCourses();
-  const courses = rawCourses as any[];
+  const courses = rawCourses ?? [];
 
   // Setup state
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
@@ -104,11 +104,12 @@ export default function PracticeQuiz() {
 
       setQuizData(data);
       setAnswers(new Array(data.questions.length).fill(null));
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred";
       setGenError(
-        err.message?.includes("Failed to fetch")
+        msg.includes("Failed to fetch")
           ? "AI service is not running. Start it with: npm run dev"
-          : err.message || "Failed to generate quiz"
+          : msg
       );
     } finally {
       setGenerating(false);

@@ -3,14 +3,17 @@
 
 import { supabase } from "@/lib/supabase";
 import CacheManager from "@/lib/cache";
+import type { Course, Material } from "@/lib/types";
+
+export type { Course, Material };
 
 const COURSES_CACHE_KEY = "courses_all";
 const COURSES_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-export async function fetchCourses(useCache = true) {
+export async function fetchCourses(useCache = true): Promise<Course[]> {
   // Try cache first — only trust non-empty cached results
   if (useCache) {
-    const cached = await CacheManager.get<any[]>(COURSES_CACHE_KEY, COURSES_CACHE_TTL);
+    const cached = await CacheManager.get<Course[]>(COURSES_CACHE_KEY, COURSES_CACHE_TTL);
     if (cached && cached.length > 0) {
       console.log("[Courses] From cache - instant load!");
       return cached;
@@ -28,7 +31,7 @@ export async function fetchCourses(useCache = true) {
 
   if (error) throw error;
 
-  const result = data ?? [];
+  const result = (data ?? []) as Course[];
   const duration = performance.now() - startTime;
 
   console.log(
@@ -43,11 +46,11 @@ export async function fetchCourses(useCache = true) {
   return result;
 }
 
-export async function fetchCourseById(courseId: string) {
+export async function fetchCourseById(courseId: string): Promise<Course | null> {
   const cacheKey = `course_${courseId}`;
 
   // Try cache first — only trust if it has materials populated
-  const cached = await CacheManager.get<any>(cacheKey, 10 * 60 * 1000);
+  const cached = await CacheManager.get<Course>(cacheKey, 10 * 60 * 1000);
   if (cached && cached.materials && cached.materials.length > 0) {
     console.log(`[Course] ${courseId} from cache - instant load!`);
     return cached;
@@ -88,13 +91,13 @@ export async function fetchCourseById(courseId: string) {
   // Cache the result
   await CacheManager.set(cacheKey, data, 10 * 60 * 1000);
 
-  return data;
+  return data as Course;
 }
 
-export async function fetchMaterialById(materialId: string) {
+export async function fetchMaterialById(materialId: string): Promise<Material | null> {
   const cacheKey = `material_${materialId}`;
 
-  const cached = await CacheManager.get(cacheKey, 10 * 60 * 1000);
+  const cached = await CacheManager.get<Material>(cacheKey, 10 * 60 * 1000);
   if (cached) {
     return cached;
   }
@@ -109,7 +112,7 @@ export async function fetchMaterialById(materialId: string) {
 
   await CacheManager.set(cacheKey, data, 10 * 60 * 1000);
 
-  return data;
+  return data as Material;
 }
 
 // Invalidate all courses-related cache entries (both list and individual records)

@@ -17,8 +17,8 @@ export default function QuizList() {
   const { user } = useAuth();
   const { data: quizzesRaw, isLoading: loadingQuizzes, isError: quizError, error: quizErrorMsg } = useQuizzes();
   const { data: coursesRaw, isLoading: loadingCourses, isError: courseError } = useCourses();
-  const quizzes = (quizzesRaw ?? []) as any[];
-  const courses = (coursesRaw ?? []) as any[];
+  const quizzes = quizzesRaw ?? [];
+  const courses = coursesRaw ?? [];
   const [progressMap, setProgressMap] = useState<Record<string, ProgressInfo>>({});
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function QuizList() {
             console.warn("[QuizList] fetchCourseProgressAPI failed, using fallback:", e);
           }
           // Fallback to old progress calculation
-          const pct = await computeCourseProgress(user.id, (c as any).materials ?? []);
+          const pct = await computeCourseProgress(user.id, (c.materials ?? []) as { id: string; type: string }[]);
           return [c.id, { progress: pct, completed_materials: 0, total_materials: 0 }] as [string, ProgressInfo];
         })
       );
@@ -60,12 +60,12 @@ export default function QuizList() {
       ) : isError ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-center">
           <p className="text-sm font-semibold text-destructive">Failed to load quizzes</p>
-          <p className="text-xs text-muted-foreground mt-1">{(quizErrorMsg as any)?.message ?? "Please check your connection and try refreshing."}</p>
+          <p className="text-xs text-muted-foreground mt-1">{(quizErrorMsg as { message?: string })?.message ?? "Please check your connection and try refreshing."}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {(quizzes as any[]).map((quiz: any) => {
-            const course = (courses as any[]).find((c: any) => c.id === quiz.course_id);
+          {quizzes.map((quiz) => {
+            const course = courses.find((c) => c.id === quiz.course_id);
             const progressInfo = progressMap[quiz.course_id];
             const progress = progressInfo?.progress ?? 0;
             const completedMats = progressInfo?.completed_materials ?? 0;
@@ -107,7 +107,7 @@ export default function QuizList() {
                     </span>
                   )}
                   {course && (
-                    <span className={`font-semibold ${unlocked ? "text-primary" : "text-amber-400"}`}>
+                    <span className={`font-semibold ${unlocked ? "text-primary" : "text-amber-600"}`}>
                       {Math.round(progress)}% complete
                     </span>
                   )}
@@ -121,7 +121,7 @@ export default function QuizList() {
                           width: `${Math.min(progress, 100)}%`,
                           background: unlocked
                             ? "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))"
-                            : "linear-gradient(90deg, hsl(38 95% 56%), hsl(38 95% 56% / 0.7))"
+                            : "linear-gradient(90deg, hsl(38 80% 50%), hsl(38 80% 60%))"
                         }}
                       />
                     </div>

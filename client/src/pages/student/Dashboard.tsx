@@ -23,6 +23,8 @@ export default function StudentDashboard() {
 
   const isLoading = loadingProgress || loadingAttempts;
 
+  const isNewUser = progressData.length === 0;
+
   const stats = [
     {
       icon: BookOpen, label: "Courses In Progress", value: isLoading ? "—" : progressData.length,
@@ -35,12 +37,12 @@ export default function StudentDashboard() {
       gradient: "from-accent/5 to-transparent",
     },
     {
-      icon: TrendingUp, label: "Avg Score", value: isLoading ? "—" : `${avgScore}%`,
+      icon: TrendingUp, label: "Average Score", value: isLoading ? "—" : `${avgScore}%`,
       color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20",
       gradient: "from-emerald-400/5 to-transparent",
     },
     {
-      icon: Clock, label: "Active Time", value: `${Math.round(telemetry.activeTimeMs / 60000)}m`,
+      icon: Clock, label: "Active Time", value: `${Math.round(telemetry.activeTimeMs / 60000)} Minutes`,
       color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/20",
       gradient: "from-blue-400/5 to-transparent",
     },
@@ -52,7 +54,7 @@ export default function StudentDashboard() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Flame className="h-4 w-4 text-orange-400" />
-            <span>Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}!</span>
+            <span>{isNewUser ? "Welcome" : "Welcome back"}{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}!</span>
           </div>
           <h1 className="text-4xl font-bold font-display">Dashboard</h1>
           <p className="text-muted-foreground">Track your learning progress and performance</p>
@@ -138,14 +140,14 @@ export default function StudentDashboard() {
                 <Link to="/courses" className="text-primary text-xs font-medium hover:underline">Browse courses →</Link>
               </div>
             ) : (
-              progressData.map((p: any) => (
+              progressData.map((p) => (
                 <div key={p.course_id} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <Link to={`/courses/${p.course_id}`}
                       className="font-medium hover:text-primary transition-colors truncate mr-4">
                       {p.courses?.title ?? "Course"}
                     </Link>
-                    <span className={`font-bold text-xs flex-shrink-0 ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-amber-400" : "text-muted-foreground"}`}>
+                    <span className={`font-bold text-xs flex-shrink-0 ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>
                       {p.progress}%
                     </span>
                   </div>

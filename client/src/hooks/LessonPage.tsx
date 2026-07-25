@@ -21,6 +21,7 @@ export default function LearningMaterial() {
       <VideoPlayer 
         videoId="react_intro_01" 
         videoUrl="https://www.w3schools.com/html/mov_bbb.mp4" 
+        durationMinutes={0}
       />
       
       {/* 2. The Lesson Content */}

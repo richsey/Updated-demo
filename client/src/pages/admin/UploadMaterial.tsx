@@ -69,14 +69,14 @@ export default function UploadMaterial() {
         .upload(filePath, selectedFile, { cacheControl: "3600", upsert: true });
 
       // Try creating bucket if it doesn't exist
-      if (uploadError && (uploadError.message?.includes("not found") || (uploadError as any).status === 404)) {
+      if (uploadError && (uploadError.message?.includes("not found") || (uploadError as { status?: number }).status === 404)) {
         try {
           await supabase.storage.createBucket("materials", { public: true });
           const retry = await supabase.storage
             .from("materials")
             .upload(filePath, selectedFile, { cacheControl: "3600", upsert: true });
           uploadError = retry.error;
-        } catch (bucketErr: any) {
+        } catch (bucketErr) {
           uploadError = bucketErr;
         }
       }
@@ -105,17 +105,19 @@ export default function UploadMaterial() {
       .limit(1)
       .maybeSingle();
 
-    const nextIndex = ((maxOrder.data as any)?.order_index ?? 0) + 1;
+    const maxOrderData = (maxOrder as unknown as { data: { order_index: number } | null }).data;
+    const orderIndex = maxOrderData ? maxOrderData.order_index : 0;
     const dbType = matType === "video" ? "video" : "tutorial";
-
-    const { error } = await (supabase.from("materials") as any).insert({
+    
+    // @ts-expect-error Supabase schema divergence
+    const { error } = await supabase.from("materials").insert([{
       course_id: courseId,
       title: title.trim(),
       type: dbType,
       url: finalUrl.trim(),
       duration_minutes: parseInt(duration || "0"),
-      order_index: nextIndex,
-    });
+      order_index: orderIndex + 1,
+    }]);
 
     setSaving(false);
     if (error) {
@@ -152,7 +154,7 @@ export default function UploadMaterial() {
               <Select value={courseId} onValueChange={setCourseId}>
                 <SelectTrigger><SelectValue placeholder={loadingCourses ? "Loading..." : "Select course"} /></SelectTrigger>
                 <SelectContent>
-                  {courses.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  {courses.map((c) => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
                 </SelectContent>
               </Select>
               {!loadingCourses && courses.length === 0 && (

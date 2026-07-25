@@ -8,7 +8,14 @@ interface CacheEntry<T> {
   ttl: number;
 }
 
-const MEMORY_CACHE = new Map<string, any>();
+// Internal memory cache entry (no key needed — key is the Map key)
+interface MemoryCacheEntry {
+  data: unknown;
+  timestamp: number;
+  ttl: number;
+}
+
+const MEMORY_CACHE = new Map<string, MemoryCacheEntry>();
 const DB_NAME = "dataflow_cache";
 const STORE_NAME = "cache_store";
 
@@ -156,7 +163,7 @@ export const CacheManager = {
     const memoryData = this.getMemory(key, maxAge) as T | null;
     if (memoryData) return memoryData;
 
-    const indexedData = await (this.getIndexedDB as any)(key, maxAge);
+    const indexedData = await CacheManager.getIndexedDB<T>(key, maxAge);
     if (indexedData) {
       this.setMemory(key, indexedData, 5 * 60 * 1000);
       return indexedData as T;

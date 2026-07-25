@@ -2,16 +2,10 @@
 // Profile management with explicit creation
 
 import { supabase } from "@/lib/supabase";
-import type { Database } from "@/lib/database.types";
+import type { Profile } from "@/lib/types";
 import CacheManager from "@/lib/cache";
 
-export interface Profile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: "student" | "admin";
-  created_at: string;
-}
+export type { Profile };
 
 /**
  * Create or ensure profile exists for a user
@@ -28,20 +22,21 @@ export async function ensureProfileExists(
     // First, try to create the profile (in case trigger didn't work)
     const { data: created, error: createError } = await supabase
       .from("profiles")
+      // @ts-expect-error Supabase schema divergence
       .insert([
         {
           id: userId,
           email,
           full_name: fullName,
-          role: email.toLowerCase().includes("admin") ? "admin" : "student",
-        } as any,
+          // All new users are students; admin promotes to lecturer/admin
+          role: "student" as const,
+        },
       ])
-      .select() // @ts-expect-error Supabase insert type strictness
-      .single() as any;
+      .select()
+      .single();
 
     if (!createError && created) {
       console.log("[Profile] Profile created successfully");
-      // Cache it
       await CacheManager.set(`profile_${userId}`, created, 5 * 60 * 1000);
       return created as Profile;
     }
@@ -52,7 +47,7 @@ export async function ensureProfileExists(
       .from("profiles")
       .select("*")
       .eq("id", userId)
-      .single() as { data: Profile | null; error: any };
+      .single();
 
     if (fetchError) {
       throw new Error(
@@ -61,7 +56,6 @@ export async function ensureProfileExists(
     }
 
     console.log("[Profile] Profile found/ensured");
-    // Cache it
     await CacheManager.set(`profile_${userId}`, profile, 5 * 60 * 1000);
     return profile as Profile;
   } catch (err) {
@@ -87,10 +81,10 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
       .from("profiles")
       .select("*")
       .eq("id", userId)
-      .single() as { data: Profile | null; error: any };
+      .single();
 
     if (!error && data) {
-      console.log("[Profile] Fetched from DB, role:", data.role);
+      console.log("[Profile] Fetched from DB, role:", (data as Profile).role);
       await CacheManager.set(`profile_${userId}`, data, 5 * 60 * 1000);
       return data as Profile;
     }
@@ -114,9 +108,12 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
       const meta = u.user_metadata ?? {};
       const appMeta = u.app_metadata ?? {};
 
-      // Role can live in app_metadata (set server-side) or user_metadata (set on signup)
-      const role: "student" | "admin" =
-        appMeta.role === "admin" || meta.role === "admin" ? "admin" : "student";
+      const role: "student" | "lecturer" | "admin" =
+        appMeta.role === "admin" || meta.role === "admin"
+          ? "admin"
+          : appMeta.role === "lecturer" || meta.role === "lecturer"
+          ? "lecturer"
+          : "student";
 
       const jwtProfile: Profile = {
         id: u.id,
@@ -145,26 +142,28 @@ export async function updateProfile(
   updates: Partial<Profile>,
 ): Promise<void> {
   try {
-    // Build a properly typed update object
     const updatePayload: Record<string, unknown> = {};
 
     if (updates.email !== undefined) updatePayload.email = updates.email;
-    if (updates.full_name !== undefined)
-      updatePayload.full_name = updates.full_name;
+    if (updates.full_name !== undefined) updatePayload.full_name = updates.full_name;
     if (updates.role !== undefined) updatePayload.role = updates.role;
+    if (updates.avatar_url !== undefined) updatePayload.avatar_url = updates.avatar_url;
+    if (updates.bio !== undefined) updatePayload.bio = updates.bio;
+    if (updates.phone !== undefined) updatePayload.phone = updates.phone;
+    if (updates.interests !== undefined) updatePayload.interests = updates.interests;
+    if (updates.learning_goals !== undefined) updatePayload.learning_goals = updates.learning_goals;
 
-    // Supabase type inference issue - wrap in try-catch and suppress type error
     const { error } = await supabase
       .from("profiles")
-      // @ts-expect-error Supabase update payload typing
-      .update(updatePayload)
+      // @ts-expect-error Supabase schema divergence
+      .update(updatePayload as Parameters<ReturnType<typeof supabase.from<"profiles">>['update']>[0])
       .eq("id", userId);
 
     if (error) throw error;
 
     // Invalidate cache
     await CacheManager.clear(`profile_${userId}`);
-    console.log("[Profile] Updated and cached cleared");
+    console.log("[Profile] Updated and cache cleared");
   } catch (err) {
     console.error("[Profile] Update error:", err);
     throw err;

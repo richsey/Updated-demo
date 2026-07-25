@@ -29,7 +29,8 @@ function GeminiStatusCard() {
 
   const checkStatus = async () => {
     try {
-      const res = await fetch("http://localhost:8001/gemini/status");
+      const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || "http://localhost:8001";
+      const res = await fetch(`${AI_SERVICE_URL}/gemini/status`);
       if (!res.ok) throw new Error("bad response");
       const data: GeminiStatus = await res.json();
       setStatus(data);
@@ -327,7 +328,7 @@ export default function AdminDashboard() {
     },
     { icon: BookOpen,      label: "Active Courses",  value: stats?.activeCourses ?? "—",           color: "text-accent",       bg: "bg-accent/10",      border: "border-accent/20",      clickable: false },
     { icon: ClipboardList, label: "Quiz Attempts",   value: stats?.totalQuizAttempts ?? "—",       color: "text-blue-400",     bg: "bg-blue-400/10",    border: "border-blue-400/20",    clickable: false },
-    { icon: TrendingUp,    label: "Avg Engagement",  value: stats ? `${stats.avgEngagement}%` : "—", color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20", clickable: false },
+    { icon: TrendingUp,    label: "Average Engagement",  value: stats ? `${stats.avgEngagement}%` : "—", color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20", clickable: false },
   ];
 
   if (isLoading) {
@@ -429,7 +430,7 @@ export default function AdminDashboard() {
                     <XAxis dataKey="course" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} domain={[0, 100]} />
                     <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }} />
-                    <Bar dataKey="avgScore" radius={[6, 6, 0, 0]} fill="url(#adminBarGrad)" name="Avg Score" />
+                    <Bar dataKey="avgScore" radius={[6, 6, 0, 0]} fill="url(#adminBarGrad)" name="Average Score" />
                     <defs>
                       <linearGradient id="adminBarGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity={1} />

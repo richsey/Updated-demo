@@ -23,7 +23,6 @@ const badgeVariants = cva(
   },
 );
 
-// eslint-disable-next-line react-refresh/only-export-components
 export interface BadgeProps
   extends
     React.HTMLAttributes<HTMLDivElement>,

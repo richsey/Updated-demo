@@ -28,10 +28,10 @@ const PAPERS: PastPaper[] = [
 ];
 
 const TYPE_CONFIG = {
-  "mid-term":  { label: "Mid-Term",  color: "bg-amber-500/15 text-amber-400 border-amber-500/30"  },
-  "final":     { label: "Final",     color: "bg-primary/15 text-primary border-primary/30"          },
-  "quiz":      { label: "Quiz",      color: "bg-accent/15 text-accent border-accent/30"             },
-  "resit":     { label: "Resit",     color: "bg-rose-500/15 text-rose-400 border-rose-500/30"       },
+  "mid-term":  { label: "Mid-Term",  color: "bg-amber-50 text-amber-700 border-amber-200"  },
+  "final":     { label: "Final",     color: "bg-primary/10 text-primary border-primary/25"          },
+  "quiz":      { label: "Quiz",      color: "bg-accent/10 text-accent border-accent/25"             },
+  "resit":     { label: "Resit",     color: "bg-rose-50 text-rose-700 border-rose-200"       },
 };
 
 const SEM_LABEL: Record<number, string> = { 1: "First Semester", 2: "Second Semester" };
@@ -93,7 +93,7 @@ export default function PastQuestions() {
             <BookMarked className="h-5 w-5 text-primary" />
             <h2 className="font-bold font-display text-base">Past Questions</h2>
           </div>
-          <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-400 leading-relaxed">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 leading-relaxed">
             <span className="mt-0.5">⚠️</span>
             <span>Sample previews only — real papers &amp; downloads coming soon.</span>
           </div>
@@ -318,7 +318,7 @@ export default function PastQuestions() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "Total Questions", value: previewPaper.exam_metadata.total_questions, icon: Hash },
-                { label: "Duration", value: `${previewPaper.exam_metadata.duration_minutes}m`, icon: Clock },
+                { label: "Duration", value: `${previewPaper.exam_metadata.duration_minutes} Minutes`, icon: Clock },
                 { label: "Level", value: `${previewPaper.course_details.level} Lvl`, icon: GraduationCap },
                 { label: "Format", value: "PDF", icon: FileText },
               ].map(({ label, value, icon: Icon }) => (

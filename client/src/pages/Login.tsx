@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { roleHomePath } from "@/components/ProtectedRoute";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,11 +32,9 @@ export default function Login() {
       return;
     }
 
-    if (signedInProfile?.role === "admin" || email.toLowerCase().includes("admin")) {
-      navigate("/admin");
-    } else {
-      navigate("/dashboard");
-    }
+    // Navigate to the correct home for their role
+    const destination = roleHomePath(signedInProfile?.role ?? "student");
+    navigate(destination);
   };
 
   return (
@@ -43,13 +42,13 @@ export default function Login() {
       className="min-h-screen flex items-center justify-center p-6"
       style={{
         background:
-          "radial-gradient(ellipse 80% 60% at 20% 20%, hsl(var(--primary) / 0.25) 0%, transparent 60%), " +
-          "radial-gradient(ellipse 70% 50% at 80% 80%, hsl(var(--accent) / 0.18) 0%, transparent 60%), " +
-          "radial-gradient(ellipse 50% 40% at 60% 10%, hsl(var(--primary) / 0.12) 0%, transparent 55%), " +
-          "hsl(var(--background))",
+          "radial-gradient(ellipse 80% 60% at 20% 10%, hsl(204 80% 88% / 0.70) 0%, transparent 60%), " +
+          "radial-gradient(ellipse 70% 50% at 80% 80%, hsl(199 70% 82% / 0.55) 0%, transparent 60%), " +
+          "radial-gradient(ellipse 50% 40% at 60% 10%, hsl(210 60% 90% / 0.50) 0%, transparent 55%), " +
+          "linear-gradient(160deg, #ffffff 0%, #e8f4fd 60%, #d0e9f7 100%)",
       }}
     >
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8 shadow-xl">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-white p-8 shadow-lg">
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-bold font-display">Sign In</h1>
           <p className="text-sm text-muted-foreground">

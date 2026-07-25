@@ -6,8 +6,9 @@ import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import type { UserMaterialProgressRow, UserCourseProgressRow } from "@/lib/types";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5000";
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,16 +66,17 @@ async function markMaterialCompleteViaSupabase(
   materialId: string
 ): Promise<MarkCompleteResult> {
   // 1. Mark this material as completed
-  const { error: upsertError } = await (supabase.from("user_material_progress") as any)
-    .upsert(
-      {
-        user_id: userId,
-        material_id: materialId,
-        completed: true,
-        completed_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,material_id" }
-    );
+  const upsertPayload: Omit<UserMaterialProgressRow, "id" | "created_at"> = {
+    user_id: userId,
+    material_id: materialId,
+    completed: true,
+    completed_at: new Date().toISOString(),
+  };
+
+  const { error: upsertError } = await supabase
+    .from("user_material_progress")
+    // @ts-expect-error Supabase schema divergence
+    .upsert(upsertPayload, { onConflict: "user_id,material_id" });
 
   if (upsertError) throw upsertError;
 
@@ -86,7 +88,7 @@ async function markMaterialCompleteViaSupabase(
     .single();
 
   if (!material) throw new Error("Material not found");
-  const courseId = (material as any).course_id;
+  const courseId = (material as unknown as { course_id: string }).course_id;
 
   // 3. Get ALL material IDs for this course
   const { data: courseMaterials } = await supabase
@@ -94,11 +96,12 @@ async function markMaterialCompleteViaSupabase(
     .select("id")
     .eq("course_id", courseId);
 
-  const materialIds = (courseMaterials || []).map((m: any) => m.id);
+  const materialIds = ((courseMaterials as unknown as { id: string }[]) ?? []).map((m) => m.id);
   const totalMaterials = materialIds.length;
 
   // 4. Count completed materials
-  const { count } = await (supabase.from("user_material_progress") as any)
+  const { count } = await supabase
+    .from("user_material_progress")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("completed", true)
@@ -107,29 +110,41 @@ async function markMaterialCompleteViaSupabase(
   const completedMaterials = count || 0;
   const progress = totalMaterials > 0 ? Math.round((completedMaterials / totalMaterials) * 100) : 0;
 
-  await (supabase.from("user_course_progress") as any).upsert(
-    {
-      user_id: userId,
-      course_id: courseId,
-      progress,
-      completed_materials: completedMaterials,
-      total_materials: totalMaterials,
-      last_updated: new Date().toISOString(),
-    },
-    { onConflict: "user_id,course_id" }
-  ).catch(() => {});
+  const courseProgressPayload: Omit<UserCourseProgressRow, "id"> = {
+    user_id: userId,
+    course_id: courseId,
+    progress,
+    completed_materials: completedMaterials,
+    total_materials: totalMaterials,
+    last_updated: new Date().toISOString(),
+  };
 
-  // 6. Mirror to student_progress (legacy table still read by some queries)
-  await (supabase.from("student_progress") as any).upsert(
-    {
-      user_id: userId,
-      course_id: courseId,
-      progress,
-      last_accessed: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,course_id" }
-  ).catch(() => {}); // non-critical — don't block if this fails
+  try {
+    await supabase
+      .from("user_course_progress")
+      // @ts-expect-error Supabase schema divergence
+      .upsert(courseProgressPayload, { onConflict: "user_id,course_id" });
+  } catch (err) {
+    // non-critical — don't block if this fails
+  }
+
+  try {
+    await supabase
+      .from("student_progress")
+      // @ts-expect-error student_progress upsert for non-standard fields
+      .upsert(
+        {
+          user_id: userId,
+          course_id: courseId,
+          progress,
+          last_accessed: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,course_id" }
+      );
+  } catch (err) {
+    // non-critical — don't block if this fails
+  }
 
   // 7. Find next material & recommendation
   let nextMaterial: AIRecommendation["recommended_next_material"] = null;
@@ -140,24 +155,32 @@ async function markMaterialCompleteViaSupabase(
       .eq("course_id", courseId)
       .order("created_at", { ascending: true });
 
-    const { data: completedRows } = await (supabase.from("user_material_progress") as any)
+    const { data: completedRows } = await supabase
+      .from("user_material_progress")
       .select("material_id")
       .eq("user_id", userId)
       .eq("completed", true);
 
-    const completedSet = new Set((completedRows || []).map((r: any) => r.material_id));
-    for (const mat of allMats || []) {
-      if (!completedSet.has((mat as any).id)) {
+    const completedSet = new Set(
+      (completedRows as Pick<UserMaterialProgressRow, "material_id">[] | null ?? []).map(
+        (r) => r.material_id
+      )
+    );
+
+    for (const mat of (allMats as unknown as { id: string, title: string, type: string, duration_minutes: number }[]) ?? []) {
+      if (!completedSet.has(mat.id)) {
         nextMaterial = {
-          id: (mat as any).id,
-          title: (mat as any).title,
-          type: (mat as any).type || "unknown",
-          duration_minutes: (mat as any).duration_minutes || 0,
+          id: mat.id,
+          title: mat.title,
+          type: mat.type || "unknown",
+          duration_minutes: mat.duration_minutes || 0,
         };
         break;
       }
     }
-  } catch {}
+  } catch {
+    // intentionally silent — next material is a nice-to-have, not critical
+  }
 
   const level: "beginner" | "intermediate" | "advanced" =
     progress <= 30 ? "beginner" : progress <= 70 ? "intermediate" : "advanced";
@@ -197,7 +220,7 @@ export async function markMaterialCompleteAPI(
   if (!response.ok) {
     const err = await response
       .json()
-      .catch(() => ({ error: "Request failed" }));
+      .catch(() => ({ error: "Request failed" })) as { error: string };
     throw new Error(err.error || "Failed to mark material complete");
   }
 
@@ -208,18 +231,23 @@ export async function fetchCourseProgressAPI(
   userId: string,
   courseId: string
 ): Promise<CourseProgressData> {
-  const { data } = await (supabase.from("user_course_progress") as any)
+  const { data } = await supabase
+    .from("user_course_progress")
     .select("progress, completed_materials, total_materials, last_updated")
     .eq("user_id", userId)
     .eq("course_id", courseId)
     .maybeSingle();
 
   if (data) {
+    const row = data as Pick<
+      UserCourseProgressRow,
+      "progress" | "completed_materials" | "total_materials" | "last_updated"
+    >;
     return {
-      progress: (data as any).progress ?? 0,
-      completed_materials: (data as any).completed_materials ?? 0,
-      total_materials: (data as any).total_materials ?? 0,
-      last_updated: (data as any).last_updated ?? null,
+      progress: row.progress ?? 0,
+      completed_materials: row.completed_materials ?? 0,
+      total_materials: row.total_materials ?? 0,
+      last_updated: row.last_updated ?? null,
     };
   }
 
@@ -236,17 +264,20 @@ export async function fetchCompletedMaterialsAPI(
     .select("id")
     .eq("course_id", courseId);
 
-  const materialIds = (materials || []).map((m: any) => m.id);
+  const materialIds = ((materials as unknown as { id: string }[]) ?? []).map((m) => m.id);
   if (materialIds.length === 0) return [];
 
   // Get completed ones from user_material_progress
-  const { data: completed } = await (supabase.from("user_material_progress") as any)
+  const { data: completed } = await supabase
+    .from("user_material_progress")
     .select("material_id")
     .eq("user_id", userId)
     .eq("completed", true)
     .in("material_id", materialIds);
 
-  return (completed as any[] || []).map((c: any) => c.material_id);
+  return (completed as Pick<UserMaterialProgressRow, "material_id">[] | null ?? []).map(
+    (c) => c.material_id
+  );
 }
 
 // ─── React Hook ───────────────────────────────────────────────────────────────

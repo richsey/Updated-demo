@@ -55,9 +55,9 @@ type RecommendationCardProps = RAGRecommendationCardProps | LegacyRecommendation
 
 function DifficultyBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    beginner: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30",
-    intermediate: "text-amber-400 bg-amber-500/15 border-amber-500/30",
-    advanced: "text-rose-400 bg-rose-500/15 border-rose-500/30",
+    beginner: "text-emerald-700 bg-emerald-50 border-emerald-200",
+    intermediate: "text-amber-700 bg-amber-50 border-amber-200",
+    advanced: "text-rose-700 bg-rose-50 border-rose-200",
   };
   return (
     <span
@@ -161,7 +161,7 @@ function LegacyCard(props: LegacyRecommendationCardProps) {
         <div className="mb-4 flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
-            {estimatedMinutes} min
+            {estimatedMinutes} Minutes
           </span>
           <span className="flex items-center gap-1">
             <BookOpen className="h-3.5 w-3.5" />

@@ -18,7 +18,7 @@ export default function CourseDetails() {
   const { courseId } = useParams();
   const { user } = useAuth();
   const { data: courseData, isLoading } = useCourse(courseId);
-  const course = courseData as any;
+  const course = courseData;
   const { data: quiz } = useQuizByCourse(courseId);
   const [completedMaterialIds, setCompletedMaterialIds] = useState<Set<string>>(new Set());
 
@@ -58,7 +58,7 @@ export default function CourseDetails() {
 
   const materials = course.materials ?? [];
   const totalCount = materials.length;
-  const completedCount = materials.filter((m: any) => completedMaterialIds.has(m.id)).length;
+  const completedCount = materials.filter((m: { id: string }) => completedMaterialIds.has(m.id)).length;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const progressColor = progress >= 80 ? "hsl(var(--primary))" : progress >= 50 ? "hsl(38 95% 56%)" : "hsl(var(--muted-foreground) / 0.5)";
 
@@ -85,9 +85,9 @@ export default function CourseDetails() {
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary" className="bg-secondary/80 text-xs">{course.category}</Badge>
                 <Badge className={`text-xs border ${
-                  course.difficulty === "beginner" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
-                  course.difficulty === "intermediate" ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
-                  "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                  course.difficulty === "beginner" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                  course.difficulty === "intermediate" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                  "bg-rose-50 text-rose-700 border-rose-200"
                 }`}>
                   {course.difficulty}
                 </Badge>
@@ -130,7 +130,7 @@ export default function CourseDetails() {
                 <div className="flex flex-col items-center gap-2">
                   {progress >= 100 ? (
                     <Button asChild className="gradient-primary border-0 glow-sm hover:opacity-90 transition-opacity">
-                      <Link to={`/quizzes/${(quiz as any).id}`}>
+                      <Link to={`/quizzes/${quiz.id}`}>
                         <CheckCircle2 className="mr-2 h-4 w-4" /> Take Quiz
                       </Link>
                     </Button>
@@ -154,7 +154,7 @@ export default function CourseDetails() {
       <div className="space-y-4">
         <h2 className="text-xl font-bold font-display">Course Materials</h2>
         <div className="space-y-3">
-          {materials.map((mat: any, idx: number) => {
+          {materials.map((mat: { id: string; type: string; title: string; duration_minutes?: number }, idx: number) => {
             const Icon = typeIcon[mat.type as keyof typeof typeIcon] ?? Code;
             const cfg = typeConfig[mat.type as keyof typeof typeConfig] ?? typeConfig.tutorial;
             return (

@@ -82,7 +82,8 @@ export default function UploadCourse() {
     const formData = new FormData(form);
 
     setSaving(true);
-    const { error } = await (supabase.from("courses") as any).insert({
+    // @ts-expect-error Supabase schema divergence
+    const { error } = await supabase.from("courses").insert([{
       title: formData.get("title") as string,
       description: formData.get("desc") as string,
       category: category.trim(),
@@ -92,7 +93,7 @@ export default function UploadCourse() {
       instructor: formData.get("instructor") as string,
       duration_minutes: parseInt(formData.get("duration") as string || "0"),
       enrolled_count: 0,
-    });
+    }]);
 
     setSaving(false);
     if (error) {
@@ -147,7 +148,7 @@ export default function UploadCourse() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Course Format</Label>
-                <Select value={format} onValueChange={(val: any) => setFormat(val)}>
+                <Select value={format} onValueChange={(val) => setFormat(val as "" | "video" | "article" | "interactive")}>
                   <SelectTrigger><SelectValue placeholder="Select format" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="video">Video Course</SelectItem>

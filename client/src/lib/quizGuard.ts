@@ -11,6 +11,7 @@ export function detectGuessing(timeTaken: number) {
  * Records a quiz cooldown start for the user in Supabase.
  */
 export async function startCooldown(userId: string, quizId: string) {
+  // @ts-expect-error Supabase schema divergence
   await supabase.from("telemetry").insert({
     user_id: userId,
     event_type: "quiz_cooldown_start",
@@ -34,6 +35,6 @@ export async function isQuizLocked(userId: string, quizId: string): Promise<bool
     .single();
 
   if (!data) return false;
-  const elapsed = Date.now() - new Date(data.created_at).getTime();
+  const elapsed = Date.now() - new Date((data as unknown as { created_at: string }).created_at).getTime();
   return elapsed < COOLDOWN_DURATION_MS;
 }

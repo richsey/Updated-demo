@@ -2,8 +2,17 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
+type AllowedRole = "student" | "lecturer" | "admin";
+
 interface ProtectedRouteProps {
-  requiredRole?: "student" | "admin";
+  requiredRole?: AllowedRole;
+}
+
+/** Returns the home path for a given role */
+export function roleHomePath(role: AllowedRole | undefined): string {
+  if (role === "admin") return "/admin";
+  if (role === "lecturer") return "/lecturer";
+  return "/dashboard";
 }
 
 export default function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
@@ -28,7 +37,7 @@ export default function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
 
   if (user && requiredRole && profile && profile.role !== requiredRole) {
     // Role mismatch: redirect to their appropriate home
-    const target = profile.role === "admin" ? "/admin" : "/dashboard";
+    const target = roleHomePath(profile.role as AllowedRole);
     if (location.pathname !== target) {
       return <Navigate to={target} replace />;
     }

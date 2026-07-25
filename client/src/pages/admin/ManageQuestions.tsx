@@ -54,28 +54,38 @@ export default function ManageQuestions() {
   useEffect(() => {
     if (!selectedCourseId) { setQuizzes([]); setSelectedQuizId(""); return; }
     setLoadingQuizzes(true);
-    (supabase.from("quizzes") as any)
-      .select("id, title, course_id")
-      .eq("course_id", selectedCourseId)
-      .order("created_at", { ascending: true })
-      .then(({ data }: any) => {
+    const fetchQuizzes = async () => {
+      try {
+        const { data } = await supabase.from("quizzes")
+          .select("*")
+          .eq("course_id", selectedCourseId)
+          .order("created_at", { ascending: true });
         setQuizzes(data ?? []);
         setSelectedQuizId("");
         setQuestions([]);
-      })
-      .finally(() => setLoadingQuizzes(false));
+      } finally {
+        setLoadingQuizzes(false);
+      }
+    };
+    fetchQuizzes();
   }, [selectedCourseId]);
 
   // Fetch questions when quiz changes
   useEffect(() => {
     if (!selectedQuizId) { setQuestions([]); return; }
     setLoadingQuestions(true);
-    (supabase.from("questions") as any)
-      .select("*")
-      .eq("quizzes_id", selectedQuizId)
-      .order("order_index", { ascending: true })
-      .then(({ data }: any) => setQuestions(data ?? []))
-      .finally(() => setLoadingQuestions(false));
+    const fetchQuestions = async () => {
+      try {
+        const { data } = await supabase.from("questions")
+          .select("*")
+          .eq("quizzes_id", selectedQuizId)
+          .order("order_index", { ascending: true });
+        setQuestions(data ?? []);
+      } finally {
+        setLoadingQuestions(false);
+      }
+    };
+    fetchQuestions();
   }, [selectedQuizId]);
 
   const handleOptionChange = (index: number, value: string) => {
@@ -92,7 +102,8 @@ export default function ManageQuestions() {
     if (!form.explanation.trim()) { toast.error("Explanation is required."); return; }
 
     setSaving(true);
-    const { error } = await (supabase.from("questions") as any).insert({
+    // @ts-expect-error Supabase schema divergence
+    const { error } = await supabase.from("questions").insert({
       quizzes_id: selectedQuizId,
       text: form.text.trim(),
       options: form.options.map(o => o.trim()),
@@ -108,7 +119,7 @@ export default function ManageQuestions() {
       toast.success("Question added!");
       setForm(EMPTY_FORM);
       // Refresh questions list
-      const { data } = await (supabase.from("questions") as any)
+      const { data } = await supabase.from("questions")
         .select("*")
         .eq("quizzes_id", selectedQuizId)
         .order("order_index", { ascending: true });
@@ -118,7 +129,7 @@ export default function ManageQuestions() {
 
   const handleDelete = async (questionId: string) => {
     setDeletingId(questionId);
-    const { error } = await (supabase.from("questions") as any)
+    const { error } = await supabase.from("questions")
       .delete()
       .eq("id", questionId);
     setDeletingId(null);
@@ -149,7 +160,7 @@ export default function ManageQuestions() {
                 <SelectValue placeholder={loadingCourses ? "Loading..." : "Select course"} />
               </SelectTrigger>
               <SelectContent>
-                {(courses as any[]).map((c: any) => (
+                {courses.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
                 ))}
               </SelectContent>

@@ -10,21 +10,42 @@ export type Database = {
           id: string;
           email: string;
           full_name: string | null;
-          role: "student" | "admin";
+          role: "student" | "lecturer" | "admin";
+          avatar_url: string | null;
+          bio: string | null;
+          phone: string | null;
+          interests: string[] | null;
+          learning_goals: string | null;
+          is_suspended: boolean | null;
+          suspended_at: string | null;
           created_at: string;
         };
         Insert: {
           id: string;
           email: string;
           full_name?: string | null;
-          role?: "student" | "admin";
+          role?: "student" | "lecturer" | "admin";
+          avatar_url?: string | null;
+          bio?: string | null;
+          phone?: string | null;
+          interests?: string[] | null;
+          learning_goals?: string | null;
+          is_suspended?: boolean | null;
+          suspended_at?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           email?: string;
           full_name?: string | null;
-          role?: "student" | "admin";
+          role?: "student" | "lecturer" | "admin";
+          avatar_url?: string | null;
+          bio?: string | null;
+          phone?: string | null;
+          interests?: string[] | null;
+          learning_goals?: string | null;
+          is_suspended?: boolean | null;
+          suspended_at?: string | null;
           created_at?: string;
         };
       };
@@ -41,6 +62,14 @@ export type Database = {
           instructor: string;
           rating: number;
           enrolled_count: number;
+          status: "draft" | "pending_approval" | "published" | "rejected" | "archived";
+          is_published: boolean;
+          tags: string[];
+          rejection_note: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
+          lecturer_id: string | null;
+          updated_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -55,6 +84,14 @@ export type Database = {
           instructor: string;
           rating?: number;
           enrolled_count?: number;
+          status?: "draft" | "pending_approval" | "published" | "rejected" | "archived";
+          is_published?: boolean;
+          tags?: string[];
+          rejection_note?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          lecturer_id?: string | null;
+          updated_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -68,6 +105,14 @@ export type Database = {
           instructor?: string;
           rating?: number;
           enrolled_count?: number;
+          status?: "draft" | "pending_approval" | "published" | "rejected" | "archived";
+          is_published?: boolean;
+          tags?: string[];
+          rejection_note?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          lecturer_id?: string | null;
+          updated_at?: string | null;
         };
       };
       materials: {
@@ -85,7 +130,7 @@ export type Database = {
           id?: string;
           course_id: string;
           title: string;
-          type: "video" | "tutorial";
+          type: "video" | "tutorial" | "article" | "pdf";
           url: string;
           duration_minutes?: number;
           order_index?: number;
@@ -93,7 +138,7 @@ export type Database = {
         };
         Update: {
           title?: string;
-          type?: "video" | "tutorial";
+          type?: "video" | "tutorial" | "article" | "pdf";
           url?: string;
           duration_minutes?: number;
           order_index?: number;
@@ -164,6 +209,133 @@ export type Database = {
           created_at?: string;
         };
         Update: never;
+      };
+      enrollments: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          enrolled_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          enrolled_at?: string;
+        };
+        Update: {
+          enrolled_at?: string;
+        };
+      };
+      announcements: {
+        Row: {
+          id: string;
+          author_id: string;
+          course_id: string | null;
+          title: string;
+          body: string;
+          is_pinned: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          course_id?: string | null;
+          title: string;
+          body: string;
+          is_pinned?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          body?: string;
+          is_pinned?: boolean;
+          updated_at?: string;
+        };
+      };
+      bookmarks: {
+        Row: {
+          id: string;
+          user_id: string;
+          material_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          material_id: string;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+      };
+      certificates: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          certificate_uid: string;
+          issued_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          certificate_uid?: string;
+          issued_at?: string;
+        };
+        Update: Record<string, never>;
+      };
+      feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          rating: number;
+          comment: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          rating: number;
+          comment?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          rating?: number;
+          comment?: string | null;
+          is_read?: boolean;
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          body: string;
+          type: "info" | "success" | "warning" | "error" | "quiz" | "enrollment" | "certificate" | "announcement";
+          is_read: boolean;
+          link: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          body: string;
+          type: "info" | "success" | "warning" | "error" | "quiz" | "enrollment" | "certificate" | "announcement";
+          is_read?: boolean;
+          link?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          is_read?: boolean;
+        };
       };
       student_progress: {
         Row: {
@@ -319,6 +491,33 @@ export type Database = {
         Update: {
           action_type?: string | null;
           rating?: number | null;
+        };
+      };
+      quiz_questions: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          text: string;
+          options: string[];
+          correct_index: number;
+          explanation: string;
+          order_index: number;
+        };
+        Insert: {
+          id?: string;
+          quiz_id: string;
+          text: string;
+          options: string[];
+          correct_index: number;
+          explanation: string;
+          order_index?: number;
+        };
+        Update: {
+          text?: string;
+          options?: string[];
+          correct_index?: number;
+          explanation?: string;
+          order_index?: number;
         };
       };
       recommendations: {

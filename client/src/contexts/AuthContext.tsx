@@ -17,7 +17,14 @@ interface Profile {
   id: string;
   email: string;
   full_name: string | null;
-  role: "student" | "admin";
+  role: "student" | "lecturer" | "admin";
+  avatar_url?: string | null;
+  bio?: string | null;
+  phone?: string | null;
+  interests?: string[];
+  learning_goals?: string | null;
+  is_suspended?: boolean;
+  created_at?: string;
 }
 
 interface AuthContextValue {
@@ -36,6 +43,7 @@ interface AuthContextValue {
     fullName: string,
   ) => Promise<{ error: Error | null; isNewUser?: boolean }>;
   signOut: () => Promise<void>;
+  updateProfileCache: (updates: Partial<Profile>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -213,8 +221,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Helper: set role in app_metadata via server (safe, uses service role key)
+    const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
     const setRoleViaServer = (userId: string) =>
-      fetch("http://localhost:5000/api/auth/set-role", {
+      fetch(`${SERVER_URL}/api/auth/set-role`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, email }),
@@ -278,9 +287,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Allow profile page to update local cache after editing
+  const updateProfileCache = (updates: Partial<Profile>) => {
+    setProfile((prev) => (prev ? { ...prev, ...updates } : prev));
+  };
+
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, profileLoading, signIn, signUp, signOut }}
+      value={{ session, user, profile, loading, profileLoading, signIn, signUp, signOut, updateProfileCache }}
     >
       {children}
     </AuthContext.Provider>

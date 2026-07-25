@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pencil, Trash2, Plus, Loader2, X, Check } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Course } from "@/lib/types";
 import { useCourses } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/lib/supabase";
 import { invalidateCoursesCache } from "@/lib/api/courses";
@@ -41,7 +42,7 @@ export default function ManageCourses() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const startEdit = (course: any) => {
+  const startEdit = (course: Course) => {
     setEditingId(course.id);
     setEditForm({
       title: course.title ?? "",
@@ -64,7 +65,8 @@ export default function ManageCourses() {
     if (!editForm.category.trim()) { toast.error("Category is required."); return; }
 
     setSaving(true);
-    const { error } = await (supabase.from("courses") as any)
+    const { error } = await supabase.from("courses")
+      // @ts-expect-error Supabase schema divergence
       .update({
         title: editForm.title.trim(),
         description: editForm.description.trim(),
@@ -99,8 +101,14 @@ export default function ManageCourses() {
       toast.error("Failed to delete course: " + error.message);
     } else {
       toast.success("Course deleted.");
+      // Optimistically remove the deleted course from the React Query cache
+      // immediately — before clearing the custom cache — so the UI updates
+      // instantly and there is no race between the cache clear and the refetch.
+      queryClient.setQueryData(["courses"], (old: Course[] | undefined) =>
+        Array.isArray(old) ? old.filter((c) => c.id !== courseId) : old
+      );
+      // Now clear the persistent cache so the next full fetch is clean.
       await invalidateCoursesCache();
-      queryClient.invalidateQueries({ queryKey: ["courses"] });
     }
   };
 
@@ -129,7 +137,7 @@ export default function ManageCourses() {
         </div>
       ) : (
         <div className="space-y-3">
-          {courses.map((course: any) => (
+          {courses.map((course) => (
             <Card key={course.id} className={editingId === course.id ? "border-primary/40 ring-1 ring-primary/20" : ""}>
               <CardContent className="p-4">
                 {editingId === course.id && editForm ? (

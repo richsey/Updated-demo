@@ -43,13 +43,13 @@ const trust = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className="min-h-screen text-foreground overflow-x-hidden" style={{ background: "linear-gradient(160deg, #ffffff 0%, #e8f4fd 45%, #d0e9f7 100%)" }}>
 
       {/* Ambient background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 right-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-info/5 rounded-full blur-[80px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full blur-[120px]" style={{ background: "hsl(204 80% 88% / 0.55)" }} />
+        <div className="absolute top-1/3 right-0 w-[400px] h-[400px] rounded-full blur-[100px]" style={{ background: "hsl(199 70% 82% / 0.40)" }} />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] rounded-full blur-[80px]" style={{ background: "hsl(210 60% 90% / 0.50)" }} />
       </div>
 
       {/* ── Nav ── */}

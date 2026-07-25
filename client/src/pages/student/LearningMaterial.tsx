@@ -20,7 +20,7 @@ export default function LearningMaterial() {
   const { materialId } = useParams();
   const { user } = useAuth();
   const { data: materialData, isLoading } = useMaterial(materialId);
-  const material = materialData as any;
+  const material = materialData;
   
   const [needsFormatShift, setNeedsFormatShift] = useState(false);
   const [showVideoAnyway, setShowVideoAnyway] = useState(false);
@@ -28,7 +28,16 @@ export default function LearningMaterial() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isStruggling, setIsStruggling] = useState(false);
   const [struggleReason, setStruggleReason] = useState("");
-  const [simplifiedMaterial, setSimplifiedMaterial] = useState<any>(null);
+  const [simplifiedMaterial, setSimplifiedMaterial] = useState<{
+    id: string;
+    title: string;
+    url: string;
+    type: string;
+    course_id: string;
+    duration_minutes: number;
+    order_index: number;
+    created_at: string;
+  } | null>(null);
   const [externalSearchUrl, setExternalSearchUrl] = useState("");
 
   const { markComplete, isMarking, aiRecommendation } = useProgressTracking();
@@ -74,8 +83,8 @@ export default function LearningMaterial() {
   useEffect(() => {
     if (!material?.course_id || !materialId) return;
     
-    (supabase.from("courses") as any).select("title").eq("id", material.course_id).single()
-      .then(({ data }: any) => { if (data) setCourseName(data.title ?? ""); });
+    supabase.from("courses").select("title").eq("id", material.course_id).single()
+      .then(({ data }) => { if (data) setCourseName((data as unknown as { title: string }).title ?? ""); });
 
     findSimplifiedMaterial(material.course_id, materialId);
   }, [material?.course_id, materialId, findSimplifiedMaterial]);
@@ -89,12 +98,12 @@ export default function LearningMaterial() {
   useEffect(() => {
     if (!user?.id || !materialId) return;
     const checkCompletion = async () => {
-      const { data } = await (supabase as any).from("user_material_progress")
+      const { data } = await supabase.from("user_material_progress")
         .select("completed")
         .eq("user_id", user.id)
         .eq("material_id", materialId)
         .maybeSingle();
-      if ((data as any)?.completed) setIsCompleted(true);
+      if (data && (data as unknown as { completed: boolean }).completed) setIsCompleted(true);
     };
     checkCompletion().catch(() => {});
   }, [user?.id, materialId]);

@@ -33,7 +33,6 @@ const buttonVariants = cva(
   },
 );
 
-// eslint-disable-next-line react-refresh/only-export-components
 export interface ButtonProps
   extends
     React.ButtonHTMLAttributes<HTMLButtonElement>,

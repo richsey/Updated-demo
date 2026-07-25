@@ -49,13 +49,13 @@ export default function Register() {
       className="min-h-screen flex items-center justify-center p-6"
       style={{
         background:
-          "radial-gradient(ellipse 80% 60% at 20% 20%, hsl(var(--primary) / 0.25) 0%, transparent 60%), " +
-          "radial-gradient(ellipse 70% 50% at 80% 80%, hsl(var(--accent) / 0.18) 0%, transparent 60%), " +
-          "radial-gradient(ellipse 50% 40% at 60% 10%, hsl(var(--primary) / 0.12) 0%, transparent 55%), " +
-          "hsl(var(--background))",
+          "radial-gradient(ellipse 80% 60% at 20% 10%, hsl(204 80% 88% / 0.70) 0%, transparent 60%), " +
+          "radial-gradient(ellipse 70% 50% at 80% 80%, hsl(199 70% 82% / 0.55) 0%, transparent 60%), " +
+          "radial-gradient(ellipse 50% 40% at 60% 10%, hsl(210 60% 90% / 0.50) 0%, transparent 55%), " +
+          "linear-gradient(160deg, #ffffff 0%, #e8f4fd 60%, #d0e9f7 100%)",
       }}
     >
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8 shadow-xl">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-sky-200/80 bg-white/90 backdrop-blur-sm p-8 shadow-xl">
         {/* Heading */}
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-bold font-display">Sign Up</h1>

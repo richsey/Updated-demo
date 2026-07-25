@@ -67,16 +67,16 @@ export default function QuizPage() {
     checkProgress();
 
     // Check step-back lock via Supabase telemetry
-    (supabase.from("telemetry") as any)
+    supabase.from("telemetry")
       .select("metadata")
       .eq("user_id", user.id)
       .eq("event_type", "quiz_stepback")
       .eq("entity_id", quizId!)
       .order("created_at", { ascending: false })
       .limit(1)
-      .then(({ data }: any) => {
+      .then(({ data }: { data: Array<{ metadata: Record<string, unknown> }> | null }) => {
         if (data && data.length > 0) {
-          const prereqCourseId = (data[0].metadata as any)?.prereqCourseId;
+          const prereqCourseId = (data[0].metadata as { prereqCourseId?: string })?.prereqCourseId;
           if (prereqCourseId) {
             setQuizLocked(true);
             setLockReason(`requires_${prereqCourseId}`);
@@ -170,7 +170,7 @@ export default function QuizPage() {
     // Effect hasn't run yet (will run on next render after quiz load)
     // We rely on React's re-render cycle — if quiz is set but questions are
     // still empty it means the quiz has no questions in the database.
-    const hasNoQuestions = quiz && (!quiz.questions || (quiz.questions as any[]).length === 0);
+    const hasNoQuestions = quiz && (!quiz.questions || quiz.questions.length === 0);
     if (hasNoQuestions) {
       return (
         <div className="text-center py-20">
@@ -244,17 +244,20 @@ export default function QuizPage() {
             .eq("title", prereqCourseName)
             .maybeSingle();
 
-          const prereqCourseId = (prereqCourse as any)?.id ?? quiz.course_id;
+          const prereqCourseId = prereqCourse ? (prereqCourse as unknown as { id: string }).id : quiz.course_id;
 
           // Store step-back in Supabase telemetry
-          await (supabase.from("telemetry") as any).insert({
+          if (prereqCourse) {
+        // @ts-expect-error Supabase schema divergence
+        supabase.from("telemetry").insert([
+          {
             user_id: user.id,
             event_type: "quiz_stepback",
-            entity_id: quiz.id,
-            metadata: { prereqCourseId },
-          });
-
-          setLockReason(`requires_${prereqCourseId}`);
+            entity_id: quizId,
+            metadata: { prereqCourseId: (prereqCourse as unknown as { id: string }).id },
+          }
+        ]).then(() => {});
+      }setLockReason(`requires_${prereqCourseId}`);
           setQuizLocked(true);
           toast({
             title: "Step-Back Protocol Active",

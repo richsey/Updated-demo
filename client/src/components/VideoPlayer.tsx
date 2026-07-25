@@ -14,8 +14,18 @@ interface VideoPlayerProps {
 declare global {
   interface Window {
     onYouTubeIframeAPIReady: () => void;
-    YT: any;
+    YT: {
+      Player: new (
+        target: HTMLIFrameElement | null,
+        config: { events: { onStateChange: (event: { data: number }) => void } }
+      ) => YouTubePlayer;
+    };
   }
+}
+
+interface YouTubePlayer {
+  getCurrentTime(): number;
+  getDuration(): number;
 }
 
 export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnded, onStruggle }: VideoPlayerProps) {
@@ -27,7 +37,7 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
   const [replays, setReplays] = useState(0);
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const hasTriggeredStruggle = useRef<boolean>(false);
@@ -70,7 +80,7 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
     if (ytId && !playerRef.current && window.YT && window.YT.Player) {
       playerRef.current = new window.YT.Player(iframeRef.current, {
         events: {
-          onStateChange: (event: any) => {
+          onStateChange: (event: { data: number }) => {
             // YT.PlayerState.PAUSED is 2
             if (event.data === 2) {
               setPauses(prev => prev + 1);

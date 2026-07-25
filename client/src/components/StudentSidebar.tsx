@@ -1,33 +1,38 @@
-import { LayoutDashboard, BookOpen, GraduationCap, ClipboardList, Sparkles, LogOut, Brain, FileStack, Zap } from "lucide-react";
+import { LayoutDashboard, BookOpen, GraduationCap, ClipboardList, Sparkles, Brain, FileStack, Zap, User, Bell, Bookmark, Award, Megaphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 
-const items = [
-  { title: "Dashboard",      url: "/dashboard",      icon: LayoutDashboard },
-  { title: "Courses",        url: "/courses",        icon: BookOpen         },
-  { title: "Quizzes",        url: "/quizzes",        icon: ClipboardList    },
-  { title: "Practice Quiz",  url: "/practice",       icon: Zap              },
-  { title: "Past Questions", url: "/past-questions", icon: FileStack        },
-  { title: "Recommendations",url: "/recommendations",icon: Sparkles         },
-  { title: "My Progress",    url: "/progress",       icon: GraduationCap   },
+const coreItems = [
+  { title: "Dashboard",       url: "/dashboard",       icon: LayoutDashboard },
+  { title: "Courses",         url: "/courses",         icon: BookOpen         },
+  { title: "Quizzes",         url: "/quizzes",         icon: ClipboardList    },
+  { title: "Practice Quiz",   url: "/practice",        icon: Zap              },
+  { title: "Past Questions",  url: "/past-questions",  icon: FileStack        },
+  { title: "Recommendations", url: "/recommendations", icon: Sparkles         },
+  { title: "My Progress",     url: "/progress",        icon: GraduationCap    },
+];
+
+const personalItems = [
+  { title: "Profile",         url: "/profile",         icon: User             },
+  { title: "Notifications",   url: "/notifications",   icon: Bell             },
+  { title: "Bookmarks",       url: "/bookmarks",       icon: Bookmark         },
+  { title: "Certificates",    url: "/certificates",    icon: Award            },
+  { title: "Announcements",   url: "/announcements",   icon: Megaphone        },
 ];
 
 export function StudentSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const navigate = useNavigate();
 
   return (
     <Sidebar collapsible="icon">
@@ -51,7 +56,35 @@ export function StudentSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {coreItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-all duration-150 group"
+                      activeClassName="bg-primary/15 text-primary font-semibold border border-primary/20 hover:bg-primary/20 hover:text-primary"
+                    >
+                      <item.icon className="h-4 w-4 flex-shrink-0 group-hover:scale-110 transition-transform duration-150" />
+                      {!collapsed && <span className="text-sm">{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Personal section */}
+        <SidebarGroup>
+          {!collapsed && (
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/50 px-3 mb-1">
+              Personal
+            </SidebarGroupLabel>
+          )}
+          <div className="mx-3 mb-2 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {personalItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -69,20 +102,6 @@ export function StudentSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter>
-        <div className="px-2 py-3">
-          <div className="mx-1 mb-3 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-sidebar-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-all duration-150 rounded-xl"
-            onClick={() => navigate("/")}
-          >
-            <LogOut className="h-4 w-4 flex-shrink-0" />
-            {!collapsed && <span className="ml-3 text-sm">Sign Out</span>}
-          </Button>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

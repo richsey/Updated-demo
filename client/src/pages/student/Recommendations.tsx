@@ -1,6 +1,6 @@
-import { useCourses, useUserProgress, useUserQuizAttempts } from "@/hooks/useSupabaseQuery";
+import { useUserProgress, useUserQuizAttempts } from "@/hooks/useSupabaseQuery";
 import { Card, CardContent } from "@/components/ui/card";
-import { Brain, BookOpen, Clock, ArrowRight, Loader2, Sparkles, ExternalLink, Youtube, FileText, GraduationCap, RefreshCw } from "lucide-react";
+import { Brain, BookOpen, Loader2, Sparkles, ExternalLink, Youtube, FileText, GraduationCap, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ interface RAGResponse {
     candidates_retrieved?: number;
     avg_quiz_score?: number;
     completion_pct?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -79,9 +79,9 @@ function SourceIcon({ source }: { source: string }) {
 
 function DifficultyBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    beginner: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30",
-    intermediate: "text-amber-400 bg-amber-500/15 border-amber-500/30",
-    advanced: "text-rose-400 bg-rose-500/15 border-rose-500/30",
+    beginner: "text-emerald-700 bg-emerald-50 border-emerald-200",
+    intermediate: "text-amber-700 bg-amber-50 border-amber-200",
+    advanced: "text-rose-700 bg-rose-50 border-rose-200",
   };
   return (
     <span
@@ -122,11 +122,15 @@ function SourceBadge({ link }: { link: RecommendationLink }) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+const levelColors: Record<string, string> = {
+  beginner: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  intermediate: "text-amber-700 bg-amber-50 border-amber-200",
+  advanced: "text-rose-700 bg-rose-50 border-rose-200",
+};
+
 export default function Recommendations() {
   const { user } = useAuth();
-  const { data: courses = [], isLoading: loadingCourses } = useCourses();
   const { data: progressData = [] } = useUserProgress();
-  const { data: attempts = [] } = useUserQuizAttempts();
   const [courseAIData, setCourseAIData] = useState<CourseAIData[]>([]);
 
   // RAG recommendations state
@@ -140,7 +144,7 @@ export default function Recommendations() {
 
     const fetchAll = async () => {
       const results: CourseAIData[] = [];
-      for (const p of progressData as any[]) {
+      for (const p of progressData) {
         try {
           const data = await fetchCourseProgressAPI(user.id, p.course_id);
           const level =
@@ -184,12 +188,13 @@ export default function Recommendations() {
 
       const data: RAGResponse = await response.json();
       setRagData(data);
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error("[RAG] Failed to fetch recommendations:", err);
+      const msg = err instanceof Error ? err.message : "An error occurred";
       setRagError(
-        err.message?.includes("Failed to fetch")
+        msg.includes("Failed to fetch")
           ? "AI service is not running. Start it with: npm run dev"
-          : err.message || "Failed to load recommendations"
+          : msg
       );
     } finally {
       setRagLoading(false);
@@ -202,34 +207,6 @@ export default function Recommendations() {
       fetchRAGRecommendations();
     }
   }, [user?.id]);
-
-  // Build a set of course IDs with low quiz scores (< 70%) as high-priority recs
-  const lowScoreCourseIds = new Set(
-    attempts
-      .filter((a) => (a.score / a.total_questions) * 100 < 70)
-      .map((a) => (a as any).quizzes?.course_id)
-      .filter(Boolean)
-  );
-
-  // Build a set of course IDs the student has started
-  const startedCourseIds = new Set(progressData.map((p: any) => p.course_id));
-
-  // Prioritize: low score courses first, then unstarted courses
-  const recommended = [
-    ...courses.filter((c) => lowScoreCourseIds.has(c.id)),
-    ...courses.filter((c) => !startedCourseIds.has(c.id) && !lowScoreCourseIds.has(c.id)),
-  ].slice(0, 6);
-
-  const getReason = (course: any) => {
-    if (lowScoreCourseIds.has(course.id)) return "Low quiz score — review recommended";
-    return "Not started yet — perfect next step";
-  };
-
-  const levelColors: Record<string, string> = {
-    beginner: "text-emerald-400 bg-emerald-500/15 border-emerald-500/30",
-    intermediate: "text-amber-400 bg-amber-500/15 border-amber-500/30",
-    advanced: "text-rose-400 bg-rose-500/15 border-rose-500/30",
-  };
 
   return (
     <div className="space-y-6">
@@ -340,7 +317,6 @@ export default function Recommendations() {
                     : rec.url
                       ? [{ url: rec.url, source: rec.source || "other", label: rec.source || "Open" }]
                       : [{ url: `https://www.youtube.com/results?search_query=${encodeURIComponent(rec.title)}+tutorial`, source: "youtube", label: "YouTube Tutorial" }];
-                  const primaryLink = links[0];
 
                   return (
                     <div
@@ -393,7 +369,7 @@ export default function Recommendations() {
               )}
               {ragData.metadata.avg_quiz_score !== undefined && (
                 <span className="text-[10px] text-muted-foreground">
-                  Avg quiz: {ragData.metadata.avg_quiz_score}%
+                  Average quiz score: {ragData.metadata.avg_quiz_score}%
                 </span>
               )}
               <span className="text-[10px] text-muted-foreground ml-auto">
@@ -418,44 +394,6 @@ export default function Recommendations() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Course-Based Recommendations */}
-      <div>
-        <h2 className="text-lg font-bold font-display mb-3">Courses for You</h2>
-        {loadingCourses ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {recommended.map((course) => (
-              <Link key={course.id} to={`/courses/${course.id}`} className="group block">
-                <div className="rounded-2xl border border-border/60 bg-card p-5 h-full flex flex-col gap-3 card-hover">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary flex-shrink-0">
-                      <BookOpen className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-sm group-hover:text-primary transition-colors leading-tight">{course.title}</h3>
-                      <Badge variant="secondary" className="text-xs mt-1">{course.category}</Badge>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{course.description}</p>
-                  <div className="mt-auto flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />{course.duration_minutes}m
-                    </span>
-                    <span className="text-xs text-primary font-medium flex items-center gap-1">
-                      View course <ArrowRight className="h-3 w-3" />
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground italic border-t border-border/40 pt-2">
-                    💡 {getReason(course)}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

@@ -196,7 +196,7 @@ export default function StudentAnalytics() {
                 <XAxis dataKey="course" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
                 <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                <Bar dataKey="avgScore" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Avg Score" />
+                <Bar dataKey="avgScore" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Average Score" />
                 <Bar dataKey="attempts" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Attempts" />
               </BarChart>
             </ResponsiveContainer>
