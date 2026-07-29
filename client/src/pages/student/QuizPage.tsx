@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { shuffleArray } from "@/lib/shuffle";
 import { detectGuessing, startCooldown, isQuizLocked } from "@/lib/quizGuard";
 import { getPrerequisites, shouldStepBack } from "@/lib/adaptiveEngine";
-import { trackQuizFailure } from "@/lib/telemetry/studentTracker";
+import { trackQuizFailure, trackQuizLocked } from "@/lib/telemetry/studentTracker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
@@ -58,10 +58,14 @@ export default function QuizPage() {
       try {
         const { progress } = await syncCourseProgress(user.id, quiz.course_id);
         setProgressPct(progress);
-        if (progress < 100) setAccessDenied(true);
+        if (progress < 100) {
+          setAccessDenied(true);
+          await trackQuizLocked(user.id, quizId!, progress);
+        }
       } catch (err) {
         console.error("Failed to check course progress:", err);
         setAccessDenied(true);
+        await trackQuizLocked(user.id, quizId!, 0);
       }
     };
     checkProgress();

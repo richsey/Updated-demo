@@ -130,7 +130,7 @@ const levelColors: Record<string, string> = {
 
 export default function Recommendations() {
   const { user } = useAuth();
-  const { data: progressData = [] } = useUserProgress();
+  const { data: progressData = [], isLoading: progressLoading } = useUserProgress();
   const [courseAIData, setCourseAIData] = useState<CourseAIData[]>([]);
 
   // RAG recommendations state
@@ -138,13 +138,20 @@ export default function Recommendations() {
   const [ragLoading, setRagLoading] = useState(false);
   const [ragError, setRagError] = useState<string | null>(null);
 
+  const activeCourses = progressData.filter(
+    (p) => (p.progress ?? 0) > 0 || (p.completed_materials ?? 0) > 0
+  );
+
   // Fetch progress-based AI data for each active course
   useEffect(() => {
-    if (!user?.id || progressData.length === 0) return;
+    if (!user?.id || activeCourses.length === 0) {
+      setCourseAIData([]);
+      return;
+    }
 
     const fetchAll = async () => {
       const results: CourseAIData[] = [];
-      for (const p of progressData) {
+      for (const p of activeCourses) {
         try {
           const data = await fetchCourseProgressAPI(user.id, p.course_id);
           const level =
@@ -166,11 +173,11 @@ export default function Recommendations() {
     };
 
     fetchAll();
-  }, [user?.id, progressData]);
+  }, [user?.id, activeCourses.length]); // depend on length so we don't spam requests if array reference changes but content is same
 
   // Fetch RAG recommendations from AI service
   const fetchRAGRecommendations = async () => {
-    if (!user?.id) return;
+    if (!user?.id || activeCourses.length === 0) return;
 
     setRagLoading(true);
     setRagError(null);
@@ -201,12 +208,47 @@ export default function Recommendations() {
     }
   };
 
-  // Auto-fetch RAG recommendations on mount
+  // Auto-fetch RAG recommendations when active courses > 0
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && activeCourses.length > 0) {
       fetchRAGRecommendations();
     }
-  }, [user?.id]);
+  }, [user?.id, activeCourses.length]);
+
+  if (progressLoading) {
+    return (
+      <div className="flex h-full min-h-[400px] items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (activeCourses.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold font-display">Recommendations</h1>
+          <p className="text-muted-foreground">Personalized suggestions based on your learning behavior</p>
+        </div>
+        <Card className="border-dashed bg-transparent shadow-none">
+          <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-4">
+            <div className="rounded-full bg-muted p-4">
+              <Sparkles className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-semibold text-lg">No Recommendations Yet</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                Start studying a course to unlock AI-powered, personalized recommendations tailored to your learning style and progress.
+              </p>
+            </div>
+            <Button asChild className="mt-4">
+              <Link to="/courses">Explore Courses</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

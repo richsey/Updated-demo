@@ -4,6 +4,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { updateMaterialProgress } from "@/lib/api/progress";
+import { createNotification } from "@/lib/api/notifications";
 
 async function logEvent(
   userId: string,
@@ -55,6 +56,61 @@ export async function trackQuizFailure(userId: string, quizId: string) {
     return true;
   }
   return false;
+}
+
+// ─── 2b. Track Quiz Locked ───────────────────────────────────────────────────
+export async function trackQuizLocked(userId: string, quizId: string, currentProgress: number) {
+  await logEvent(userId, "quiz_locked_view", quizId, { currentProgress });
+
+  const { count } = await supabase
+    .from("telemetry")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("event_type", "quiz_locked_view")
+    .eq("entity_id", quizId);
+
+  // If they hit the locked screen 3 times, send them a reminder
+  if (count === 3) {
+    // 1. Get the course for this quiz
+    const { data: quizData } = await supabase
+      .from("quizzes")
+      .select("course_id, courses(title)")
+      .eq("id", quizId)
+      .single();
+
+    if (quizData && (quizData as any).course_id) {
+      const qd = quizData as any;
+      const courseTitle = qd.courses?.title || "the course";
+      
+      // 2. Find materials they haven't completed
+      const { data: materials } = await supabase
+        .from("materials")
+        .select("id, title")
+        .eq("course_id", qd.course_id);
+
+      const { data: completed } = await supabase
+        .from("user_material_progress")
+        .select("material_id")
+        .eq("user_id", userId)
+        .eq("completed", true);
+
+      const completedIds = new Set((completed || []).map((c: any) => c.material_id));
+      const missedMaterials = (materials || []).filter((m: any) => !completedIds.has(m.id));
+
+      if (missedMaterials.length > 0) {
+        const missedTitles = missedMaterials.slice(0, 2).map((m: any) => m.title).join(", ");
+        const suffix = missedMaterials.length > 2 ? " and others" : "";
+        
+        await createNotification({
+          user_id: userId,
+          title: "Quiz Locked Reminder",
+          body: `You are trying to take a quiz but haven't finished ${courseTitle} yet. Make sure to complete: ${missedTitles}${suffix}.`,
+          type: "info",
+          is_read: false,
+        });
+      }
+    }
+  }
 }
 
 // ─── 3. Track Lesson Abandonment ─────────────────────────────────────────────

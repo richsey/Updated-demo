@@ -44,7 +44,15 @@ const DIFFICULTY_OPTIONS = [
 
 export default function PracticeQuiz() {
   const { data: rawCourses = [], isLoading: loadingCourses } = useCourses();
-  const courses = rawCourses ?? [];
+  
+  // Filter out duplicate courses by title
+  const uniqueCoursesMap = new Map();
+  (rawCourses ?? []).forEach(course => {
+    if (!uniqueCoursesMap.has(course.title)) {
+      uniqueCoursesMap.set(course.title, course);
+    }
+  });
+  const courses = Array.from(uniqueCoursesMap.values());
 
   // Setup state
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");

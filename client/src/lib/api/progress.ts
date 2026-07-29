@@ -71,10 +71,8 @@ export async function updateCourseProgress(
   }
 
   const { error } = await supabase
-    .from("user_material_progress")
-    // Re-using user_material_progress for the upsert path — we intentionally
-    // upsert to user_course_progress but the generated type isn't available via
-    // the typed client for this table. ts-expect-error covers the mismatch.
+    .from("user_course_progress")
+    // Re-using user_course_progress for the upsert path
     // @ts-expect-error user_course_progress upsert type
     .upsert(
       {
