@@ -150,4 +150,30 @@ router.post("/change-role", async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/auth/delete-user
+ * Body: { userId }
+ */
+router.delete("/delete-user", async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    if (error) {
+      console.error("[Auth Route] Failed to delete user:", error.message);
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.json({ success: true, message: "User deleted successfully" });
+  } catch (err) {
+    console.error("[Auth Route] Unexpected error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

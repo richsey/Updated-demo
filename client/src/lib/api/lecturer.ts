@@ -323,3 +323,17 @@ export async function adminCreateUser(payload: CreateUserPayload) {
   }
   return res.json();
 }
+
+/** Admin: delete a user completely from the system */
+export async function adminDeleteUser(targetUserId: string): Promise<void> {
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
+  const res = await fetch(`${SERVER_URL}/api/auth/delete-user`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: targetUserId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error || "Failed to delete user");
+  }
+}

@@ -6,6 +6,7 @@ import {
   adminSuspendUser,
   adminActivateUser,
   adminCreateUser,
+  adminDeleteUser,
 } from "@/lib/api/lecturer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,9 +14,20 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Users, Search, Shield, GraduationCap, User, Loader2,
-  Ban, CheckCircle2, ChevronDown, Plus,
+  Ban, CheckCircle2, ChevronDown, Plus, Trash2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof User; badge: string }> = {
@@ -71,6 +83,15 @@ export default function AdminManageUsers() {
       toast({ title: "User reactivated" });
     },
     onError: () => toast({ title: "Failed to activate user", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => adminDeleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast({ title: "User deleted successfully" });
+    },
+    onError: (err: Error) => toast({ title: "Failed to delete user", description: err.message, variant: "destructive" }),
   });
 
   const createMutation = useMutation({
@@ -308,6 +329,44 @@ export default function AdminManageUsers() {
                           <span className="hidden sm:inline">Suspend</span>
                         </Button>
                       )}
+
+                      {/* Delete Button wrapped in AlertDialog */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 w-8 p-0 border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={user.role === "admin" || deleteMutation.isPending}
+                            title={user.role === "admin" ? "Admins cannot be deleted" : "Delete User"}
+                          >
+                            {deleteMutation.isPending && deleteMutation.variables === user.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete 
+                              <span className="font-semibold text-foreground"> {user.full_name || user.email} </span> 
+                              and remove all their data from our servers.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(user.id)}
+                              className="bg-rose-600 hover:bg-rose-700 text-white"
+                            >
+                              Yes, Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 );
