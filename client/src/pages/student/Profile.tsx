@@ -199,6 +199,19 @@ export default function StudentProfile() {
     ? form.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : (user?.email?.[0] ?? "?").toUpperCase();
 
+  const originalInterests = (profile?.interests as string[]) ?? [];
+  const interestsChanged =
+    form.interests.length !== originalInterests.length ||
+    !form.interests.every((i) => originalInterests.includes(i));
+
+  const hasChanges =
+    avatarFile !== null ||
+    form.full_name !== (profile?.full_name ?? "") ||
+    form.phone !== (profile?.phone ?? "") ||
+    form.bio !== (profile?.bio ?? "") ||
+    form.learning_goals !== (profile?.learning_goals ?? "") ||
+    interestsChanged;
+
   return (
     <div className="space-y-8 pb-6 max-w-2xl">
       <div className="space-y-1">
@@ -468,9 +481,13 @@ export default function StudentProfile() {
       </Card>
 
       <Button
-        className="gradient-primary text-white border-0 glow-sm w-full sm:w-auto"
+        className={`w-full sm:w-auto transition-all duration-300 ${
+          hasChanges 
+            ? "gradient-primary text-white border-0 glow-sm" 
+            : "bg-muted text-muted-foreground"
+        }`}
         onClick={() => saveMutation.mutate()}
-        disabled={saveMutation.isPending}
+        disabled={saveMutation.isPending || !hasChanges}
       >
         {saveMutation.isPending ? (
           <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</>
