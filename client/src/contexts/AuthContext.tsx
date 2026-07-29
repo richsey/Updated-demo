@@ -278,6 +278,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      if (user?.id) {
+        localStorage.removeItem(`active_time_${user.id}`);
+      }
       await supabase.auth.signOut();
     } finally {
       setProfile(null);

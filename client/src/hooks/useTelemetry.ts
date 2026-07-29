@@ -30,11 +30,33 @@ export function useTelemetry(config: TelemetryConfig): TelemetryAPI {
   const eventQueueRef = useRef<TelemetryEvent[]>([]);
 
   // ── Active Time Tracking ─────────────────────────────────────────
-  const [activeTimeMs, setActiveTimeMs] = useState(0);
+  const activeTimeStorageKey = userId ? `active_time_${userId}` : null;
+  const initialAccumulated = activeTimeStorageKey
+    ? parseInt(localStorage.getItem(activeTimeStorageKey) || "0", 10)
+    : 0;
+
+  const [activeTimeMs, setActiveTimeMs] = useState(initialAccumulated);
   const [isActive, setIsActive] = useState(!document.hidden);
   const activeTimerStartRef = useRef<number>(document.hidden ? 0 : Date.now());
-  const accumulatedTimeRef = useRef(0);
+  const accumulatedTimeRef = useRef(initialAccumulated);
 
+  // Sync state if userId changes
+  useEffect(() => {
+    if (activeTimeStorageKey) {
+      const stored = parseInt(localStorage.getItem(activeTimeStorageKey) || "0", 10);
+      accumulatedTimeRef.current = stored;
+      setActiveTimeMs(stored);
+      if (activeTimerStartRef.current > 0) {
+        activeTimerStartRef.current = Date.now();
+      }
+    } else {
+      accumulatedTimeRef.current = 0;
+      setActiveTimeMs(0);
+      if (activeTimerStartRef.current > 0) {
+        activeTimerStartRef.current = Date.now();
+      }
+    }
+  }, [activeTimeStorageKey]);
   /** Pause the active timer and return elapsed ms since last resume */
   const pauseTimer = useCallback(() => {
     if (activeTimerStartRef.current > 0) {
@@ -230,10 +252,14 @@ export function useTelemetry(config: TelemetryConfig): TelemetryAPI {
   // ── Update activeTimeMs periodically for UI display ──────────────
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveTimeMs(getCurrentActiveTime());
+      const current = getCurrentActiveTime();
+      setActiveTimeMs(current);
+      if (activeTimeStorageKey) {
+        localStorage.setItem(activeTimeStorageKey, current.toString());
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [getCurrentActiveTime]);
+  }, [getCurrentActiveTime, activeTimeStorageKey]);
 
   return {
     trackEvent,
