@@ -171,6 +171,122 @@ router.delete("/delete-user", async (req, res) => {
 
     return res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/auth/register
+ * Body: { email, password, fullName }
+ * Generates a verification code, saves to email_verifications table, and sends email.
+ */
+router.post("/register", async (req, res) => {
+  try {
+    const { email, password, fullName } = req.body;
+
+    if (!email || !password || !fullName) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Generate a 6-digit verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store in email_verifications table
+    const { error: dbError } = await supabaseAdmin
+      .from("email_verifications")
+      .upsert({
+        email,
+        full_name: fullName,
+        password_hash: password, // Temp storage (sent over HTTPS)
+        verification_code: code
+      }, { onConflict: 'email' });
+
+    if (dbError) {
+      console.error("[Auth Route] Failed to save verification:", dbError.message);
+      return res.status(500).json({ error: "Failed to generate verification" });
+    }
+
+    // Send the email (import dynamically to avoid circular dep if not at top)
+    const { sendVerificationEmail } = await import("../utils/email.js");
+    const emailSent = await sendVerificationEmail(email, code);
+
+    if (!emailSent) {
+      return res.status(500).json({ error: "Failed to send verification email. Check SMTP settings." });
+    }
+
+    return res.json({ success: true, message: "Verification code sent" });
+  } catch (err) {
+    console.error("[Auth Route] Unexpected error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/auth/verify
+ * Body: { email, code }
+ * Verifies code and officially creates user in Supabase.
+ */
+router.post("/verify", async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and code are required" });
+    }
+
+    // 1. Fetch from email_verifications
+    const { data: verifications, error: fetchError } = await supabaseAdmin
+      .from("email_verifications")
+      .select("*")
+      .eq("email", email)
+      .eq("verification_code", code);
+
+    if (fetchError || !verifications || verifications.length === 0) {
+      return res.status(400).json({ error: "Invalid verification code or email" });
+    }
+
+    const verification = verifications[0];
+
+    // Check expiration
+    if (new Date(verification.expires_at) < new Date()) {
+      return res.status(400).json({ error: "Verification code has expired" });
+    }
+
+    // 2. Create the actual user in Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: verification.email,
+      password: verification.password_hash,
+      email_confirm: true,
+      user_metadata: { full_name: verification.full_name }
+    });
+
+    if (authError) {
+      console.error("[Auth Route] Supabase User Creation Failed:", authError.message);
+      return res.status(500).json({ error: authError.message });
+    }
+
+    const userId = authData.user.id;
+
+    // 3. Delete the verification record
+    await supabaseAdmin.from("email_verifications").delete().eq("email", email);
+
+    // 4. (Optional) Force the profile to 'student' initially
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
+      app_metadata: { role: "student" },
+    });
+    
+    // Create or update profile
+    await supabaseAdmin
+      .from('profiles')
+      .upsert({ 
+        id: userId,
+        email: verification.email,
+        role: "student", 
+        full_name: verification.full_name 
+      });
+
+    return res.json({ success: true, user: authData.user });
+  } catch (err) {
     console.error("[Auth Route] Unexpected error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }

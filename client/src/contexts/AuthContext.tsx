@@ -42,6 +42,10 @@ interface AuthContextValue {
     password: string,
     fullName: string,
   ) => Promise<{ error: Error | null; isNewUser?: boolean }>;
+  verifyEmailCode: (
+    email: string,
+    code: string,
+  ) => Promise<{ error: Error | null; isVerified?: boolean }>;
   signOut: () => Promise<void>;
   updateProfileCache: (updates: Partial<Profile>) => void;
 }
@@ -203,77 +207,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    console.log("[Auth] Attempting sign up for:", email);
-    const startTime = performance.now();
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-
-    if (error) {
-      console.error("[Auth] Sign up error:", error.message);
-      let msg = error.message;
-      if (msg.includes("User already registered"))
-        msg = "User already exists. Please sign in.";
-      return { error: new Error(msg) };
-    }
-
-    // Helper: set role in app_metadata via server (safe, uses service role key)
-    const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
-    const setRoleViaServer = (userId: string) =>
-      fetch(`${SERVER_URL}/api/auth/set-role`, {
+    console.log("[Auth] Attempting custom sign up for:", email);
+    
+    try {
+      const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
+      const res = await fetch(`${SERVER_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, email }),
-      }).catch((err) => console.warn("[Auth] set-role call failed (non-fatal):", err));
-
-    // If we have a user but no session, it usually means email confirmation is enabled
-    if (data.user && !data.session) {
-      console.log(
-        "[Auth] Sign up successful - Email confirmation required in",
-        performance.now() - startTime,
-        "ms",
-      );
-      // Set role in background, then create profile
-      setRoleViaServer(data.user.id);
-      ensureProfileExists(data.user.id, email, fullName).catch((err) => {
-        console.error("[Auth] Background profile creation failed:", err);
+        body: JSON.stringify({ email, password, fullName }),
       });
-      return {
-        error: new Error("REGISTRATION_SUCCESS_CONFIRM_EMAIL"),
-        isNewUser: true,
-      };
-    }
-
-    console.log(
-      "[Auth] Sign up successful - Session started in",
-      performance.now() - startTime,
-      "ms",
-    );
-
-    // Set role via server (so app_metadata.role is immediately correct)
-    if (data.user) {
-      await setRoleViaServer(data.user.id);
-    }
-
-    // Explicitly create profile to ensure it exists (fixes trigger failure)
-    if (data.user) {
-      try {
-        const profile = await ensureProfileExists(
-          data.user.id,
-          email,
-          fullName,
-        );
-        setProfile(profile);
-      } catch (err) {
-        console.error("[Auth] Profile creation failed:", err);
-        // Still return success - user can continue without profile
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        return { error: new Error(data.error || "Failed to register") };
       }
+      
+      return { error: null, isNewUser: true };
+    } catch (err: any) {
+      console.error("[Auth] Sign up error:", err.message);
+      return { error: err };
     }
+  };
 
-    return { error: null };
+  const verifyEmailCode = async (email: string, code: string) => {
+    console.log("[Auth] Attempting code verification for:", email);
+    
+    try {
+      const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
+      const res = await fetch(`${SERVER_URL}/api/auth/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        return { error: new Error(data.error || "Verification failed") };
+      }
+      
+      return { error: null, isVerified: true };
+    } catch (err: any) {
+      console.error("[Auth] Verification error:", err.message);
+      return { error: err };
+    }
   };
 
   const signOut = async () => {
@@ -297,7 +275,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, profileLoading, signIn, signUp, signOut, updateProfileCache }}
+      value={{ 
+        session, 
+        user, 
+        profile, 
+        loading, 
+        profileLoading, 
+        signIn, 
+        signUp, 
+        verifyEmailCode, 
+        signOut, 
+        updateProfileCache 
+      }}
     >
       {children}
     </AuthContext.Provider>
