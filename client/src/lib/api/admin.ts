@@ -182,3 +182,36 @@ export async function fetchStudentsWithCourses(): Promise<StudentDetail[]> {
     courses: progressByUser[p.id] ?? [],
   }));
 }
+
+/**
+ * Fetch high-risk quiz attempts (score < 50%)
+ */
+export async function fetchHighRiskQuizzes() {
+  const { data, error } = await supabase
+    .from("quiz_attempts")
+    .select("id, score, total_questions, created_at, profiles(full_name, email), quizzes(title, course_id)")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  
+  if (!data) return [];
+  
+  // Filter for scores < 50%
+  const highRisk = data.filter((attempt: any) => {
+    if (attempt.total_questions === 0) return false;
+    const percentage = (attempt.score / attempt.total_questions) * 100;
+    return percentage < 50;
+  });
+
+  return highRisk.map((attempt: any) => ({
+    id: attempt.id,
+    score: attempt.score,
+    total_questions: attempt.total_questions,
+    percentage: Math.round((attempt.score / attempt.total_questions) * 100),
+    created_at: attempt.created_at,
+    studentName: attempt.profiles?.full_name || attempt.profiles?.email || "Unknown Student",
+    studentEmail: attempt.profiles?.email || "Unknown Email",
+    quizTitle: attempt.quizzes?.title || "Unknown Quiz",
+    courseId: attempt.quizzes?.course_id,
+  }));
+}

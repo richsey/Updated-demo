@@ -17,7 +17,6 @@ const contentItems = [
   { title: "Manage Courses",    url: "/admin/courses",          icon: BookOpen        },
   { title: "Upload Course",     url: "/admin/upload-course",    icon: Upload          },
   { title: "Upload Material",   url: "/admin/upload-material",  icon: FileText        },
-  { title: "Create Quiz",       url: "/admin/create-quiz",      icon: ClipboardList   },
   { title: "Manage Questions",  url: "/admin/manage-questions", icon: ListChecks      },
   { title: "Student Analytics", url: "/admin/analytics",        icon: BarChart3       },
 ];

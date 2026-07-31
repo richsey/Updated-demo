@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAdminStats } from "@/lib/api/admin";
+import { fetchAdminStats, fetchHighRiskQuizzes } from "@/lib/api/admin";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -47,8 +48,15 @@ export default function StudentAnalytics() {
     queryFn: fetchAdminStats,
   });
 
+  const { data: highRiskQuizzes, isLoading: loadingHighRisk } = useQuery({
+    queryKey: ["admin-high-risk"],
+    queryFn: fetchHighRiskQuizzes,
+  });
+
   const sumCounts = (arr: TelemetryStat[] = []) => arr.reduce((acc, curr) => acc + curr.count, 0);
-  const totalAlerts = sumCounts(telemetry?.replays) + sumCounts(telemetry?.failures) + sumCounts(telemetry?.abandoned);
+  const totalAlerts = sumCounts(telemetry?.replays) + (highRiskQuizzes?.length ?? 0) + sumCounts(telemetry?.abandoned);
+
+  const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-10">
@@ -85,7 +93,7 @@ export default function StudentAnalytics() {
                   <AlertTriangle className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{sumCounts(telemetry?.failures)}</div>
+                  <div className="text-2xl font-bold">{highRiskQuizzes?.length ?? 0}</div>
                   <p className="text-xs text-muted-foreground">Topics requiring intervention</p>
                 </CardContent>
               </Card>
@@ -104,15 +112,16 @@ export default function StudentAnalytics() {
 
             {totalAlerts > 0 && (
               <div className="grid gap-6 md:grid-cols-2 mt-4">
-                {(telemetry?.failures?.length ?? 0) > 0 && (
+                {(highRiskQuizzes?.length ?? 0) > 0 && (
                   <Card>
                     <CardHeader><CardTitle className="text-sm">High-Risk Quizzes</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
-                      {telemetry!.failures.map((stat) => (
-                        <div key={stat.id}
-                          className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20">
-                          <span className="font-medium text-destructive text-sm">ID: {stat.label}…</span>
-                          <Badge variant="destructive">Failed {stat.count}x</Badge>
+                      {highRiskQuizzes!.slice(0, 5).map((attempt: any) => (
+                        <div key={attempt.id}
+                          onClick={() => setSelectedQuiz(attempt)}
+                          className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20 cursor-pointer hover:bg-destructive/20 transition-colors">
+                          <span className="font-medium text-destructive text-sm truncate max-w-[150px]">{attempt.studentName}</span>
+                          <Badge variant="destructive">{attempt.percentage}%</Badge>
                         </div>
                       ))}
                     </CardContent>
@@ -230,6 +239,43 @@ export default function StudentAnalytics() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Quiz Attempt Modal */}
+      <Dialog open={!!selectedQuiz} onOpenChange={(open) => !open && setSelectedQuiz(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>High-Risk Quiz Attempt Details</DialogTitle>
+          </DialogHeader>
+          {selectedQuiz && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase font-bold">Student Name</p>
+                  <p className="font-medium">{selectedQuiz.studentName}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase font-bold">Email</p>
+                  <p className="font-medium truncate">{selectedQuiz.studentEmail}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase font-bold">Quiz Title</p>
+                  <p className="font-medium">{selectedQuiz.quizTitle}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase font-bold">Score</p>
+                  <p className="font-bold text-destructive">
+                    {selectedQuiz.score} / {selectedQuiz.total_questions} ({selectedQuiz.percentage}%)
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-muted-foreground text-xs uppercase font-bold">Date</p>
+                  <p className="font-medium">{new Date(selectedQuiz.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

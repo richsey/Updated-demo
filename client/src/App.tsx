@@ -51,7 +51,6 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManageCourses from "./pages/admin/ManageCourses";
 import UploadCourse from "./pages/admin/UploadCourse";
 import UploadMaterial from "./pages/admin/UploadMaterial";
-import CreateQuiz from "./pages/admin/CreateQuiz";
 import ManageQuestions from "./pages/admin/ManageQuestions";
 import StudentAnalytics from "./pages/admin/StudentAnalytics";
 import AdminManageUsers from "./pages/admin/ManageUsers";
@@ -117,7 +116,6 @@ const App = () => (
                 <Route path="/admin/courses" element={<ManageCourses />} />
                 <Route path="/admin/upload-course" element={<UploadCourse />} />
                 <Route path="/admin/upload-material" element={<UploadMaterial />} />
-                <Route path="/admin/create-quiz" element={<CreateQuiz />} />
                 <Route path="/admin/manage-questions" element={<ManageQuestions />} />
                 <Route path="/admin/analytics" element={<StudentAnalytics />} />
                 <Route path="/admin/users" element={<AdminManageUsers />} />
