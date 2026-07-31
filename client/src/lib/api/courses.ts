@@ -25,13 +25,35 @@ export async function fetchCourses(useCache = true): Promise<Course[]> {
 
   const { data, error } = await supabase
     .from("courses")
-    .select("*")
+    .select("*, materials(id), enrollments(id)")
     .order("created_at", { ascending: true });
   console.log("[Courses] Supabase response:", data, error);
 
-  if (error) throw error;
+  if (error) {
+    // If the join fails, fallback to simple select
+    console.warn("Falling back to simple select due to error:", error);
+    const fallback = await supabase.from("courses").select("*").order("created_at", { ascending: true });
+    if (fallback.error) throw fallback.error;
+    
+    const result = (fallback.data ?? []) as Course[];
+    
+    // Default 0 for fallback
+    result.forEach((c: any) => {
+       c.materials = [];
+       c.enrolled_count = 0;
+    });
+    
+    if (result.length > 0) {
+      await CacheManager.set(COURSES_CACHE_KEY, result, COURSES_CACHE_TTL);
+    }
+    return result;
+  }
 
-  const result = (data ?? []) as Course[];
+  const result = (data ?? []).map((course: any) => ({
+    ...course,
+    enrolled_count: course.enrollments ? course.enrollments.length : 0,
+  })) as Course[];
+  
   const duration = performance.now() - startTime;
 
   console.log(
@@ -61,7 +83,7 @@ export async function fetchCourseById(courseId: string): Promise<Course | null> 
   // Try joined query first (requires FK relationship in Supabase)
   let { data, error } = await supabase
     .from("courses")
-    .select("*, materials(*)")
+    .select("*, materials(*), enrollments(id)")
     .eq("id", courseId)
     .single();
 
@@ -82,11 +104,15 @@ export async function fetchCourseById(courseId: string): Promise<Course | null> 
       .eq("course_id", courseId)
       .order("order_index", { ascending: true });
 
-    data = { ...(courseData as Record<string, unknown>), materials: materialsData ?? [] } as typeof data;
+    data = { ...(courseData as Record<string, unknown>), materials: materialsData ?? [], enrollments: [] } as typeof data;
     error = null;
   }
 
   if (error) throw error;
+  
+  if (data) {
+    (data as any).enrolled_count = (data as any).enrollments ? (data as any).enrollments.length : 0;
+  }
 
   // Cache the result
   await CacheManager.set(cacheKey, data, 10 * 60 * 1000);
