@@ -18,3 +18,7 @@ venv/
 
 # Mac
 .DS_Store
+
+#MD Files
+PROJECT_REPORT.md
+ARCHITECTURE.md
