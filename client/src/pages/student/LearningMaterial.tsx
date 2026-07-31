@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, CheckCircle2, Sparkles, PlayCircle, Code, ArrowRight, BrainCircuit, X, Zap, Clock, TimerOff, Info, ExternalLink, Youtube } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, Sparkles, PlayCircle, Code, ArrowRight, BrainCircuit, X, Zap, Clock, TimerOff, Info, ExternalLink, Youtube, Lock } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -11,7 +11,7 @@ import {
   trackPdfOpen,
   trackPdfReadingTime,
 } from "@/lib/telemetry/studentTracker";
-import { useMaterial } from "@/hooks/useSupabaseQuery";
+import { useMaterial, useQuizByCourse, useCourseProgress } from "@/hooks/useSupabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
@@ -21,6 +21,8 @@ export default function LearningMaterial() {
   const { user } = useAuth();
   const { data: materialData, isLoading } = useMaterial(materialId);
   const material = materialData;
+  const { data: quiz } = useQuizByCourse(material?.course_id);
+  const { data: courseProgress = 0 } = useCourseProgress(material?.course_id);
   
   const [needsFormatShift, setNeedsFormatShift] = useState(false);
   const [showVideoAnyway, setShowVideoAnyway] = useState(false);
@@ -234,6 +236,29 @@ export default function LearningMaterial() {
                     <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-all" />
                   </div>
                 </Link>
+              )}
+            </div>
+          )}
+
+          {quiz && (
+            <div className="rounded-3xl border border-border/40 bg-card/40 p-6 flex flex-col items-center justify-center text-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+              <h4 className="font-bold font-display text-base">Course Final Quiz</h4>
+              {courseProgress >= 100 ? (
+                <>
+                  <p className="text-xs text-muted-foreground">You have completed all materials. Ready to test your knowledge?</p>
+                  <Button asChild className="gradient-primary border-0 glow-sm hover:opacity-90 w-full rounded-2xl h-12">
+                    <Link to={`/quizzes/${quiz.id}`}>
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Take Quiz
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">Complete all materials in this course to unlock the final quiz.</p>
+                  <Button disabled variant="outline" className="border-border/60 opacity-60 cursor-not-allowed w-full rounded-2xl h-12">
+                    <Lock className="mr-2 h-4 w-4" /> Quiz Locked ({courseProgress}%)
+                  </Button>
+                </>
               )}
             </div>
           )}

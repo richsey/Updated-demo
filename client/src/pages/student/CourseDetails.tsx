@@ -76,7 +76,7 @@ export default function CourseDetails() {
             className="w-full h-full object-cover"
             onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200"; }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/98 via-background/80 to-background/30" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/60 backdrop-blur-[2px]" />
         </div>
 
         <div className="relative p-8 md:p-12">

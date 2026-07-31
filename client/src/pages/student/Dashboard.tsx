@@ -5,12 +5,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Link } from "react-router-dom";
 import { useActiveTime } from "@/contexts/ActiveTimeContext";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export default function StudentDashboard() {
   const { profile } = useAuth();
   const { data: progressData = [], isLoading: loadingProgress } = useUserProgress();
   const { data: attempts = [], isLoading: loadingAttempts } = useUserQuizAttempts();
   const telemetry = useActiveTime();
+  const [activeModal, setActiveModal] = useState<"courses" | "quizzes" | null>(null);
 
   const avgScore = attempts.length > 0
     ? Math.round(attempts.reduce((a, b) => a + (b.score / b.total_questions) * 100, 0) / attempts.length)
@@ -27,21 +30,25 @@ export default function StudentDashboard() {
 
   const stats = [
     {
+      id: "courses",
       icon: BookOpen, label: "Courses In Progress", value: isLoading ? "—" : progressData.length,
       color: "text-primary", bg: "bg-primary/10", border: "border-primary/20",
       gradient: "from-primary/5 to-transparent",
     },
     {
+      id: "quizzes",
       icon: Target, label: "Quizzes Taken", value: isLoading ? "—" : attempts.length,
       color: "text-accent", bg: "bg-accent/10", border: "border-accent/20",
       gradient: "from-accent/5 to-transparent",
     },
     {
+      id: "score",
       icon: TrendingUp, label: "Average Score", value: isLoading ? "—" : `${avgScore}%`,
       color: "text-success", bg: "bg-success/10", border: "border-success/20",
       gradient: "from-success/5 to-transparent",
     },
     {
+      id: "time",
       icon: Clock, label: "Active Time", value: `${Math.round(telemetry.activeTimeMs / 60000)} Minutes`,
       color: "text-info", bg: "bg-info/10", border: "border-info/20",
       gradient: "from-info/5 to-transparent",
@@ -68,7 +75,16 @@ export default function StudentDashboard() {
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
-          <Card key={s.label} className={`border ${s.border} bg-gradient-to-br ${s.gradient} card-hover relative overflow-hidden`}>
+          <Card 
+            key={s.label} 
+            className={`border ${s.border} bg-gradient-to-br ${s.gradient} card-hover relative overflow-hidden ${
+              s.id === "courses" || s.id === "quizzes" ? "cursor-pointer" : ""
+            }`}
+            onClick={() => {
+              if (s.id === "courses") setActiveModal("courses");
+              if (s.id === "quizzes") setActiveModal("quizzes");
+            }}
+          >
             <div className={`absolute top-0 right-0 h-20 w-20 ${s.bg} rounded-full -translate-y-1/2 translate-x-1/2 blur-xl opacity-50`} />
             <CardContent className="flex items-center gap-4 p-5 relative">
               <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${s.bg} border ${s.border} ${s.color} flex-shrink-0`}>
@@ -170,6 +186,58 @@ export default function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog for details */}
+      <Dialog open={activeModal !== null} onOpenChange={(open) => !open && setActiveModal(null)}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {activeModal === "courses" ? "Courses In Progress" : "Quizzes Taken"}
+            </DialogTitle>
+            <DialogDescription>
+              {activeModal === "courses" 
+                ? "Here are the courses you are currently taking."
+                : "Here is a history of the quizzes you have completed."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-2">
+            {activeModal === "courses" && (
+              progressData.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No courses in progress.</p>
+              ) : (
+                progressData.map((p) => (
+                  <Link key={p.course_id} to={`/courses/${p.course_id}`} onClick={() => setActiveModal(null)} className="block p-3 rounded-lg border border-border/60 hover:bg-secondary/50 transition-colors">
+                    <div className="flex justify-between items-center">
+                      <p className="font-medium text-sm truncate pr-4">{p.courses?.title ?? "Course"}</p>
+                      <span className={`font-bold text-xs ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-warning" : "text-muted-foreground"}`}>{p.progress}%</span>
+                    </div>
+                  </Link>
+                ))
+              )
+            )}
+            
+            {activeModal === "quizzes" && (
+              attempts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No quizzes taken.</p>
+              ) : (
+                attempts.map((a) => (
+                  <div key={a.id} className="p-3 rounded-lg border border-border/60 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{a.quizzes?.title ?? "Quiz"}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold">{Math.round((a.score / a.total_questions) * 100)}%</span>
+                      <p className="text-[10px] text-muted-foreground">{a.score} / {a.total_questions}</p>
+                    </div>
+                  </div>
+                ))
+              )
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
