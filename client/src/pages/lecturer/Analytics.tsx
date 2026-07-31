@@ -106,10 +106,10 @@ export default function LecturerAnalytics() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { icon: BookOpen, label: "Published Courses", value: publishedCourses.length, color: "text-emerald-600", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-          { icon: Users, label: "Total Students", value: totalStudents, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-          { icon: TrendingUp, label: "Average Enrollments", value: avgEnrollment, color: "text-violet-600", bg: "bg-violet-500/10", border: "border-violet-500/20" },
-          { icon: Star, label: "Average Quiz Score", value: `${avgScore}%`, color: "text-amber-600", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+          { icon: BookOpen, label: "Published Courses", value: publishedCourses.length, color: "text-success", bg: "bg-success/10", border: "border-success/20" },
+          { icon: Users, label: "Total Students", value: totalStudents, color: "text-info", bg: "bg-info/10", border: "border-info/20" },
+          { icon: TrendingUp, label: "Average Enrollments", value: avgEnrollment, color: "text-accent", bg: "bg-accent/10", border: "border-accent/20" },
+          { icon: Star, label: "Average Quiz Score", value: `${avgScore}%`, color: "text-warning", bg: "bg-warning/10", border: "border-warning/20" },
         ].map((s) => (
           <Card key={s.label} className={`border ${s.border} relative overflow-hidden`}>
             <div className={`absolute top-0 right-0 h-16 w-16 ${s.bg} rounded-full -translate-y-1/2 translate-x-1/2 blur-xl opacity-60`} />
@@ -174,7 +174,7 @@ export default function LecturerAnalytics() {
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                   <Tooltip formatter={(value) => [`${value}%`, "Average Score"]} />
-                  <Bar dataKey="avgScore" radius={[4, 4, 0, 0]} fill="#10b981" />
+                  <Bar dataKey="avgScore" radius={[4, 4, 0, 0]} fill="hsl(var(--success))" />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -209,9 +209,9 @@ export default function LecturerAnalytics() {
                       <span className="text-sm text-muted-foreground">{enrollment?.enrollments ?? 0} students</span>
                       <Badge
                         className={
-                          c.status === "published" ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                          : c.status === "pending_approval" ? "bg-amber-100 text-amber-700 border-amber-200"
-                          : "bg-slate-100 text-slate-600 border-slate-200"
+                          c.status === "published" ? "bg-success/10 text-success border-success/20"
+                          : c.status === "pending_approval" ? "bg-warning/10 text-warning border-warning/20"
+                          : "bg-muted text-muted-foreground border-border"
                         }
                       >
                         {c.status.replace("_", " ")}

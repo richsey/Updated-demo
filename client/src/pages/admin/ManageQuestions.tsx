@@ -233,7 +233,7 @@ export default function ManageQuestions() {
                               key={i}
                               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs border ${
                                 i === q.correct_index
-                                  ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
+                                  ? "border-success/30 bg-success/5 text-success"
                                   : "border-border/40 text-muted-foreground"
                               }`}
                             >
@@ -303,8 +303,8 @@ export default function ManageQuestions() {
                           onClick={() => setForm(f => ({ ...f, correct_index: i }))}
                           className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-all ${
                             form.correct_index === i
-                              ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
-                              : "border-border/60 text-muted-foreground hover:border-emerald-500/30 hover:text-emerald-400"
+                              ? "border-success/50 bg-success/15 text-success"
+                              : "border-border/60 text-muted-foreground hover:border-success/30 hover:text-success"
                           }`}
                           title="Mark as correct answer"
                         >
@@ -318,14 +318,14 @@ export default function ManageQuestions() {
                           value={opt}
                           onChange={e => handleOptionChange(i, e.target.value)}
                           required
-                          className={form.correct_index === i ? "border-emerald-500/30 focus-visible:ring-emerald-500/20" : ""}
+                          className={form.correct_index === i ? "border-success/30 focus-visible:ring-success/20" : ""}
                         />
                       </div>
                     ))}
                   </div>
                   <p className="text-[11px] text-muted-foreground">
                     Click a letter button to mark that option as the correct answer.
-                    Currently selected: <span className="text-emerald-400 font-bold">Option {String.fromCharCode(65 + form.correct_index)}</span>
+                    Currently selected: <span className="text-success font-bold">Option {String.fromCharCode(65 + form.correct_index)}</span>
                   </p>
                 </div>
 

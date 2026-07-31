@@ -38,13 +38,13 @@ export default function StudentDashboard() {
     },
     {
       icon: TrendingUp, label: "Average Score", value: isLoading ? "—" : `${avgScore}%`,
-      color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20",
-      gradient: "from-emerald-400/5 to-transparent",
+      color: "text-success", bg: "bg-success/10", border: "border-success/20",
+      gradient: "from-success/5 to-transparent",
     },
     {
       icon: Clock, label: "Active Time", value: `${Math.round(telemetry.activeTimeMs / 60000)} Minutes`,
-      color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/20",
-      gradient: "from-blue-400/5 to-transparent",
+      color: "text-info", bg: "bg-info/10", border: "border-info/20",
+      gradient: "from-info/5 to-transparent",
     },
   ];
 
@@ -53,7 +53,7 @@ export default function StudentDashboard() {
       <div className="flex items-end justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Flame className="h-4 w-4 text-orange-400" />
+            <Flame className="h-4 w-4 text-warning" />
             <span>{isNewUser ? "Welcome" : "Welcome back"}{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}!</span>
           </div>
           <h1 className="text-4xl font-bold font-display">Dashboard</h1>
@@ -147,7 +147,7 @@ export default function StudentDashboard() {
                       className="font-medium hover:text-primary transition-colors truncate mr-4">
                       {p.courses?.title ?? "Course"}
                     </Link>
-                    <span className={`font-bold text-xs flex-shrink-0 ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>
+                    <span className={`font-bold text-xs flex-shrink-0 ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-warning" : "text-muted-foreground"}`}>
                       {p.progress}%
                     </span>
                   </div>
@@ -159,7 +159,7 @@ export default function StudentDashboard() {
                         background: p.progress >= 80
                           ? "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))"
                           : p.progress >= 50
-                            ? "linear-gradient(90deg, hsl(38 95% 56%), hsl(38 95% 56% / 0.7))"
+                            ? "linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.7))"
                             : "linear-gradient(90deg, hsl(var(--muted-foreground) / 0.5), hsl(var(--muted-foreground) / 0.3))"
                       }}
                     />

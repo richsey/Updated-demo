@@ -59,7 +59,7 @@ export default function AdminCourseApprovals() {
 
       {/* Badge */}
       {pendingCourses.length > 0 && (
-        <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <strong>{pendingCourses.length}</strong> course{pendingCourses.length !== 1 ? "s" : ""} awaiting your review
         </div>
@@ -69,8 +69,8 @@ export default function AdminCourseApprovals() {
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : pendingCourses.length === 0 ? (
         <div className="text-center py-20 space-y-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mx-auto">
-            <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 border border-success/20 mx-auto">
+            <CheckCircle2 className="h-8 w-8 text-success" />
           </div>
           <h3 className="text-xl font-bold font-display">All caught up!</h3>
           <p className="text-muted-foreground text-sm">No courses are pending review at the moment.</p>
@@ -78,7 +78,7 @@ export default function AdminCourseApprovals() {
       ) : (
         <div className="space-y-5">
           {pendingCourses.map((course) => (
-            <Card key={course.id} className="border-amber-200/60 bg-amber-50/20 overflow-hidden">
+            <Card key={course.id} className="border-warning/20 bg-warning/5 overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex flex-col sm:flex-row">
                   {/* Thumbnail */}
@@ -96,7 +96,7 @@ export default function AdminCourseApprovals() {
                     <div>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Badge variant="secondary" className="text-xs">{course.category}</Badge>
-                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1 text-xs">
+                        <Badge className="bg-warning/10 text-warning border-warning/20 gap-1 text-xs">
                           <Clock className="h-2.5 w-2.5" /> Pending Review
                         </Badge>
                         <Badge variant="outline" className="text-xs capitalize">{course.difficulty}</Badge>
@@ -116,8 +116,8 @@ export default function AdminCourseApprovals() {
 
                     {/* Reject form */}
                     {rejectingId === course.id && (
-                      <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3 space-y-2">
-                        <p className="text-sm font-semibold text-rose-700">Rejection reason (required)</p>
+                      <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 space-y-2">
+                        <p className="text-sm font-semibold text-destructive">Rejection reason (required)</p>
                         <Input
                           placeholder="Explain why this course is being rejected..."
                           value={rejectionNotes[course.id] ?? ""}
@@ -129,7 +129,7 @@ export default function AdminCourseApprovals() {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            className="bg-rose-600 hover:bg-rose-700 text-white border-0 gap-1 text-xs"
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border-0 gap-1 text-xs"
                             onClick={() =>
                               rejectMutation.mutate({
                                 courseId: course.id,
@@ -157,7 +157,7 @@ export default function AdminCourseApprovals() {
                     {rejectingId !== course.id && (
                       <div className="flex gap-3">
                         <Button
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 gap-2 flex-1"
+                          className="bg-success hover:bg-success/90 text-white border-0 gap-2 flex-1"
                           onClick={() => approveMutation.mutate(course.id)}
                           disabled={approveMutation.isPending}
                         >
@@ -166,7 +166,7 @@ export default function AdminCourseApprovals() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="border-rose-300 text-rose-700 hover:bg-rose-50 gap-2 flex-1"
+                          className="border-destructive/30 text-destructive hover:bg-destructive/10 gap-2 flex-1"
                           onClick={() => setRejectingId(course.id)}
                         >
                           <XCircle className="h-4 w-4" /> Reject

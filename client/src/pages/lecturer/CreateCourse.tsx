@@ -62,8 +62,8 @@ export default function CreateCourse() {
   if (done) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-5 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-          <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 border border-success/20">
+          <CheckCircle2 className="h-8 w-8 text-success" />
         </div>
         <h2 className="text-2xl font-bold font-display">Course Created!</h2>
         <p className="text-muted-foreground text-sm max-w-sm">
@@ -94,7 +94,7 @@ export default function CreateCourse() {
       <Card className="border-border/60">
         <CardHeader className="pb-4">
           <CardTitle className="font-display text-base flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-emerald-600" /> Course Details
+            <BookOpen className="h-4 w-4 text-success" /> Course Details
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -176,7 +176,7 @@ export default function CreateCourse() {
                   type="button"
                   onClick={() => set("thumbnail", url)}
                   className={`rounded-xl overflow-hidden h-20 border-2 transition-all ${
-                    form.thumbnail === url ? "border-emerald-500 ring-2 ring-emerald-500/30" : "border-border/60 hover:border-border"
+                    form.thumbnail === url ? "border-success ring-2 ring-success/30" : "border-border/60 hover:border-border"
                   }`}
                 >
                   <img src={url} alt="thumbnail" className="w-full h-full object-cover" />

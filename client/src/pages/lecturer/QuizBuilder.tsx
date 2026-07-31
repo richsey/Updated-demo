@@ -169,8 +169,8 @@ export default function LecturerQuizBuilder() {
   if (done) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-5 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-          <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 border border-success/20">
+          <CheckCircle2 className="h-8 w-8 text-success" />
         </div>
         <h2 className="text-2xl font-bold font-display">Quiz Created!</h2>
         <p className="text-muted-foreground text-sm">Your quiz has been added to the course.</p>
@@ -203,7 +203,7 @@ export default function LecturerQuizBuilder() {
       <Card className="border-border/60">
         <CardHeader className="pb-3">
           <CardTitle className="font-display text-base flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-emerald-600" /> Quiz Details
+            <ClipboardList className="h-4 w-4 text-success" /> Quiz Details
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -317,14 +317,14 @@ export default function LecturerQuizBuilder() {
         <div className="flex gap-3">
           <Button
             variant="outline"
-            className="flex-1 border-dashed border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 gap-2"
+            className="flex-1 border-dashed border-success/30 text-success hover:bg-success/10 gap-2"
             onClick={addQuestion}
           >
             <Plus className="h-4 w-4" /> Add Question
           </Button>
           <Button
             variant="outline"
-            className="flex-1 border-dashed border-violet-500/30 text-violet-600 hover:bg-violet-50 gap-2"
+            className="flex-1 border-dashed border-accent/30 text-accent hover:bg-accent/10 gap-2"
             onClick={handleAIGenerate}
             disabled={generating}
           >

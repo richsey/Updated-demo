@@ -18,25 +18,25 @@ const features = [
     icon: Target,
     title: "Adaptive Recommendations",
     desc: "Detects when a recommendation leads to poor outcomes and automatically adjusts the learning strategy in real time.",
-    gradient: "from-emerald-500/20 to-teal-500/10",
-    iconColor: "text-emerald-400",
-    border: "border-emerald-500/20",
+    gradient: "from-success/20 to-success/10",
+    iconColor: "text-success",
+    border: "border-success/20",
   },
   {
     icon: BarChart3,
     title: "Deep Engagement Tracking",
     desc: "Tracks real behavior — video rewinds, idle time, quiz hesitation — not just page views or clicks.",
-    gradient: "from-violet-500/20 to-purple-500/10",
-    iconColor: "text-violet-400",
-    border: "border-violet-500/20",
+    gradient: "from-accent/20 to-accent/10",
+    iconColor: "text-accent",
+    border: "border-accent/20",
   },
   {
     icon: BookOpen,
     title: "Learning Style Detection",
     desc: "Classifies you as a visual, reading, or interactive learner and automatically adapts content format.",
-    gradient: "from-blue-500/20 to-cyan-500/10",
-    iconColor: "text-blue-400",
-    border: "border-blue-500/20",
+    gradient: "from-primary/20 to-primary/10",
+    iconColor: "text-primary",
+    border: "border-primary/20",
   },
 ];
 
@@ -54,27 +54,12 @@ const trust = [
 
 export default function Landing() {
   return (
-    <div
-      className="min-h-screen text-foreground overflow-x-hidden"
-      style={{
-        background:
-          "linear-gradient(160deg, #ffffff 0%, #e8f4fd 45%, #d0e9f7 100%)",
-      }}
-    >
+    <div className="min-h-screen text-foreground overflow-x-hidden bg-background">
       {/* Ambient background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full blur-[120px]"
-          style={{ background: "hsl(204 80% 88% / 0.55)" }}
-        />
-        <div
-          className="absolute top-1/3 right-0 w-[400px] h-[400px] rounded-full blur-[100px]"
-          style={{ background: "hsl(199 70% 82% / 0.40)" }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-[300px] h-[300px] rounded-full blur-[80px]"
-          style={{ background: "hsl(210 60% 90% / 0.50)" }}
-        />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full blur-[120px] bg-primary/20" />
+        <div className="absolute top-1/3 right-0 w-[400px] h-[400px] rounded-full blur-[100px] bg-accent/20" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] rounded-full blur-[80px] bg-info/20" />
       </div>
 
       {/* ── Nav ── */}

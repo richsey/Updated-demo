@@ -15,14 +15,14 @@ import {
 import { Link } from "react-router-dom";
 
 const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string; bg: string }> = {
-  info:         { icon: Info,          color: "text-blue-600",    bg: "bg-blue-500/10"    },
-  success:      { icon: CheckCircle2,  color: "text-emerald-600", bg: "bg-emerald-500/10" },
-  warning:      { icon: AlertTriangle, color: "text-amber-600",   bg: "bg-amber-500/10"   },
-  error:        { icon: XCircle,       color: "text-rose-600",    bg: "bg-rose-500/10"    },
-  quiz:         { icon: ClipboardList, color: "text-violet-600",  bg: "bg-violet-500/10"  },
-  enrollment:   { icon: BookOpen,      color: "text-primary",     bg: "bg-primary/10"     },
-  certificate:  { icon: Award,         color: "text-amber-600",   bg: "bg-amber-500/10"   },
-  announcement: { icon: Megaphone,     color: "text-slate-600",   bg: "bg-slate-500/10"   },
+  info:         { icon: Info,          color: "text-info",         bg: "bg-info/10"        },
+  success:      { icon: CheckCircle2,  color: "text-success",      bg: "bg-success/10"     },
+  warning:      { icon: AlertTriangle, color: "text-warning",      bg: "bg-warning/10"     },
+  error:        { icon: XCircle,       color: "text-destructive",  bg: "bg-destructive/10" },
+  quiz:         { icon: ClipboardList, color: "text-accent",       bg: "bg-accent/10"      },
+  enrollment:   { icon: BookOpen,      color: "text-primary",      bg: "bg-primary/10"     },
+  certificate:  { icon: Award,         color: "text-warning",      bg: "bg-warning/10"     },
+  announcement: { icon: Megaphone,     color: "text-muted-foreground", bg: "bg-muted"      },
 };
 
 export default function StudentNotifications() {

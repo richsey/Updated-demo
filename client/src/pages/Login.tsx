@@ -38,17 +38,8 @@ export default function Login() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-6"
-      style={{
-        background:
-          "radial-gradient(ellipse 80% 60% at 20% 10%, hsl(204 80% 88% / 0.70) 0%, transparent 60%), " +
-          "radial-gradient(ellipse 70% 50% at 80% 80%, hsl(199 70% 82% / 0.55) 0%, transparent 60%), " +
-          "radial-gradient(ellipse 50% 40% at 60% 10%, hsl(210 60% 90% / 0.50) 0%, transparent 55%), " +
-          "linear-gradient(160deg, #ffffff 0%, #e8f4fd 60%, #d0e9f7 100%)",
-      }}
-    >
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-white p-8 shadow-lg">
+    <div className="min-h-screen flex items-center justify-center p-6 gradient-hero">
+      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-8 shadow-lg">
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-bold font-display">Sign In</h1>
           <p className="text-sm text-muted-foreground">

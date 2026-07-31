@@ -30,10 +30,10 @@ function getPasswordStrength(pw: string): { score: number; label: string; color:
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
 
-  if (score <= 1) return { score, label: "Weak",   color: "bg-red-500"   };
-  if (score <= 3) return { score, label: "Fair",   color: "bg-amber-500" };
-  if (score === 4) return { score, label: "Good",  color: "bg-blue-500"  };
-  return              { score, label: "Strong", color: "bg-emerald-500" };
+  if (score <= 1) return { score, label: "Weak",   color: "bg-destructive"   };
+  if (score <= 3) return { score, label: "Fair",   color: "bg-warning" };
+  if (score === 4) return { score, label: "Good",  color: "bg-info"  };
+  return              { score, label: "Strong", color: "bg-success" };
 }
 
 // ─── Password Input with toggle visibility ────────────────────────────────────
@@ -389,7 +389,7 @@ export default function StudentProfile() {
               <p className="text-[11px] text-destructive">Passwords do not match.</p>
             )}
             {pwForm.confirm && passwordsMatch && pwForm.confirm.length > 0 && (
-              <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+              <p className="text-[11px] text-success flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" /> Passwords match
               </p>
             )}

@@ -81,10 +81,10 @@ function CertificateCard({ cert }: { cert: Certificate }) {
   };
 
   return (
-    <div ref={cardRef} className="relative rounded-2xl border-4 border-primary/30 bg-gradient-to-br from-white via-blue-50/30 to-white p-8 overflow-hidden">
+    <div ref={cardRef} className="relative rounded-2xl border-4 border-primary/30 bg-gradient-to-br from-background via-info/5 to-background p-8 overflow-hidden">
       {/* Decorative background */}
       <div className="absolute top-0 right-0 h-32 w-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 h-24 w-24 bg-amber-500/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 h-24 w-24 bg-warning/10 rounded-full translate-y-1/2 -translate-x-1/2" />
 
       {/* Header */}
       <div className="text-center relative">
@@ -133,7 +133,7 @@ function CertificateCard({ cert }: { cert: Certificate }) {
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Certificate ID</p>
           <p className="text-xs font-mono font-medium text-muted-foreground">{cert.certificate_uid}</p>
         </div>
-        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1 text-xs">
+        <Badge className="bg-success/10 text-success border-success/20 gap-1 text-xs">
           <Award className="h-3 w-3" /> Verified
         </Badge>
       </div>
@@ -192,8 +192,8 @@ export default function StudentCertificates() {
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : certificates.length === 0 ? (
         <div className="text-center py-20 space-y-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 mx-auto">
-            <Award className="h-8 w-8 text-amber-500" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-warning/10 border border-warning/20 mx-auto">
+            <Award className="h-8 w-8 text-warning" />
           </div>
           <h3 className="text-xl font-bold font-display">No certificates yet</h3>
           <p className="text-muted-foreground text-sm max-w-sm mx-auto">

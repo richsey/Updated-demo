@@ -37,9 +37,9 @@ export default function Progress() {
           <TrendingUp className="h-4 w-4 text-accent" />
           <span>Average score: <span className="font-bold text-accent">{avgScore}%</span></span>
         </div>
-        <div className="glass rounded-xl border border-blue-400/20 px-4 py-2.5 flex items-center gap-2 text-sm">
-          <Calendar className="h-4 w-4 text-blue-400" />
-          <span><span className="font-bold text-blue-400">{progressData.length}</span> active courses</span>
+        <div className="glass rounded-xl border border-info/20 px-4 py-2.5 flex items-center gap-2 text-sm">
+          <Calendar className="h-4 w-4 text-info" />
+          <span><span className="font-bold text-info">{progressData.length}</span> active courses</span>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export default function Progress() {
                           <span className="text-xs text-muted-foreground">
                             {p.completed_materials ?? "?"}/{p.total_materials ?? "?"} done
                           </span>
-                          <span className={`text-sm font-bold ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>
+                          <span className={`text-sm font-bold ${p.progress >= 80 ? "text-primary" : p.progress >= 50 ? "text-warning" : "text-muted-foreground"}`}>
                             {p.progress}%
                           </span>
                         </div>
@@ -121,7 +121,7 @@ export default function Progress() {
                             background: p.progress >= 80
                               ? "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))"
                               : p.progress >= 50
-                                ? "linear-gradient(90deg, hsl(38 95% 56%), hsl(38 95% 56% / 0.7))"
+                                ? "linear-gradient(90deg, hsl(var(--warning)), hsl(var(--warning) / 0.7))"
                                 : "linear-gradient(90deg, hsl(var(--muted-foreground) / 0.4), hsl(var(--muted-foreground) / 0.2))"
                           }}
                         />

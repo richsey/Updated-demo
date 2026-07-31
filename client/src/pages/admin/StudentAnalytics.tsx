@@ -23,7 +23,7 @@ async function fetchTelemetryStats() {
   const failures: Record<string, number> = {};
   const abandoned: Record<string, number> = {};
 
-  for (const row of data ?? []) {
+  for (const row of (data as unknown as Array<{ event_type: string, entity_id: string }>) ?? []) {
     if (row.event_type === "video_replay") replays[row.entity_id] = (replays[row.entity_id] ?? 0) + 1;
     if (row.event_type === "quiz_failure") failures[row.entity_id] = (failures[row.entity_id] ?? 0) + 1;
     if (row.event_type === "lesson_abandoned") abandoned[row.entity_id] = (abandoned[row.entity_id] ?? 0) + 1;
@@ -68,10 +68,10 @@ export default function StudentAnalytics() {
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-3">
-              <Card className="border-l-4 border-l-blue-500">
+              <Card className="border-l-4 border-l-info">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Video Replays</CardTitle>
-                  <Video className="h-4 w-4 text-blue-500" />
+                  <Video className="h-4 w-4 text-info" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{sumCounts(telemetry?.replays)}</div>
@@ -79,10 +79,10 @@ export default function StudentAnalytics() {
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-red-500">
+              <Card className="border-l-4 border-l-destructive">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Quiz Failures</CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{sumCounts(telemetry?.failures)}</div>
@@ -90,10 +90,10 @@ export default function StudentAnalytics() {
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-orange-500">
+              <Card className="border-l-4 border-l-warning">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Abandoned Lessons</CardTitle>
-                  <BookX className="h-4 w-4 text-orange-500" />
+                  <BookX className="h-4 w-4 text-warning" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{sumCounts(telemetry?.abandoned)}</div>
@@ -110,8 +110,8 @@ export default function StudentAnalytics() {
                     <CardContent className="space-y-3">
                       {telemetry!.failures.map((stat) => (
                         <div key={stat.id}
-                          className="flex items-center justify-between p-2 bg-red-500/10 rounded-lg border border-red-500/20">
-                          <span className="font-medium text-red-700 dark:text-red-400 text-sm">ID: {stat.label}…</span>
+                          className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20">
+                          <span className="font-medium text-destructive text-sm">ID: {stat.label}…</span>
                           <Badge variant="destructive">Failed {stat.count}x</Badge>
                         </div>
                       ))}
@@ -125,9 +125,9 @@ export default function StudentAnalytics() {
                     <CardContent className="space-y-3">
                       {telemetry!.abandoned.map((stat) => (
                         <div key={stat.id}
-                          className="flex items-center justify-between p-2 bg-orange-500/10 rounded-lg border border-orange-500/20">
-                          <span className="font-medium text-orange-700 dark:text-orange-400 text-sm">ID: {stat.label}…</span>
-                          <Badge className="bg-orange-500">Abandoned {stat.count}x</Badge>
+                          className="flex items-center justify-between p-2 bg-warning/10 rounded-lg border border-warning/20">
+                          <span className="font-medium text-warning text-sm">ID: {stat.label}…</span>
+                          <Badge className="bg-warning">Abandoned {stat.count}x</Badge>
                         </div>
                       ))}
                     </CardContent>

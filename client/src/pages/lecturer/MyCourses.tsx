@@ -17,17 +17,17 @@ import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
-  draft:            { label: "Draft",           class: "bg-slate-100 text-slate-700 border-slate-200"      },
-  pending_approval: { label: "Pending Review",  class: "bg-amber-50 text-amber-700 border-amber-200"       },
-  published:        { label: "Published",       class: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  rejected:         { label: "Rejected",        class: "bg-rose-50 text-rose-700 border-rose-200"          },
-  archived:         { label: "Archived",        class: "bg-slate-50 text-slate-500 border-slate-200"       },
+  draft:            { label: "Draft",           class: "bg-muted text-muted-foreground border-border"      },
+  pending_approval: { label: "Pending Review",  class: "bg-warning/10 text-warning border-warning/20"       },
+  published:        { label: "Published",       class: "bg-success/10 text-success border-success/20" },
+  rejected:         { label: "Rejected",        class: "bg-destructive/10 text-destructive border-destructive/20"          },
+  archived:         { label: "Archived",        class: "bg-muted/50 text-muted-foreground border-border"       },
 };
 
 const DIFF_CONFIG: Record<string, string> = {
-  beginner:     "bg-emerald-50 text-emerald-700 border-emerald-200",
-  intermediate: "bg-amber-50 text-amber-700 border-amber-200",
-  advanced:     "bg-rose-50 text-rose-700 border-rose-200",
+  beginner:     "bg-success/10 text-success border-success/20",
+  intermediate: "bg-warning/10 text-warning border-warning/20",
+  advanced:     "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 export default function LecturerMyCourses() {
@@ -151,7 +151,7 @@ export default function LecturerMyCourses() {
                   </div>
 
                   {course.status === "rejected" && course.rejection_note && (
-                    <div className="rounded-lg bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700">
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-2.5 text-xs text-destructive">
                       <p className="font-semibold mb-0.5">Rejection reason:</p>
                       <p>{course.rejection_note}</p>
                     </div>
@@ -173,7 +173,7 @@ export default function LecturerMyCourses() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                        className="flex-1 text-xs gap-1 border-warning/30 text-warning hover:bg-warning/10"
                         onClick={() => submitMutation.mutate({ courseId: course.id })}
                         disabled={submitMutation.isPending}
                       >

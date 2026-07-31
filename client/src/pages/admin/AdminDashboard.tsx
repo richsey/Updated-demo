@@ -60,11 +60,11 @@ function GeminiStatusCard() {
           {checking ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : isReady ? (
-            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 gap-1 text-xs">
+            <Badge className="bg-success/15 text-success border border-success/30 gap-1 text-xs">
               <Wifi className="h-3 w-3" /> Connected
             </Badge>
           ) : (
-            <Badge className="bg-red-500/15 text-red-400 border border-red-500/30 gap-1 text-xs">
+            <Badge className="bg-destructive/15 text-destructive border border-destructive/30 gap-1 text-xs">
               <WifiOff className="h-3 w-3" /> {status?.status || "Unconfigured"}
             </Badge>
           )}
@@ -91,7 +91,7 @@ function GeminiStatusCard() {
               recommendations and quizzes.
             </p>
             {status?.error && (
-              <p className="text-red-400 font-mono text-[10px] bg-red-950/20 px-1.5 py-0.5 rounded border border-red-900/30 mt-1">
+              <p className="text-destructive font-mono text-[10px] bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/20 mt-1">
                 Error: {status.error}
               </p>
             )}
@@ -99,7 +99,7 @@ function GeminiStatusCard() {
         )}
 
         {!checking && isReady && (
-          <p className="mt-2 text-[11px] text-emerald-400/80">
+          <p className="mt-2 text-[11px] text-success">
             Using Google Gemini API — cloud recommendations and quiz generation enabled
           </p>
         )}
@@ -112,7 +112,7 @@ function GeminiStatusCard() {
 
 function ProgressBar({ value }: { value: number }) {
   const color =
-    value >= 80 ? "bg-emerald-500" : value >= 50 ? "bg-amber-500" : value >= 20 ? "bg-primary" : "bg-muted-foreground/40";
+    value >= 80 ? "bg-success" : value >= 50 ? "bg-warning" : value >= 20 ? "bg-primary" : "bg-muted-foreground/40";
   return (
     <div className="h-1.5 w-full rounded-full bg-muted/40 overflow-hidden">
       <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.min(value, 100)}%` }} />
@@ -167,8 +167,8 @@ function StudentRow({ student }: { student: StudentDetail }) {
                   )}
                 </div>
                 <span className={`text-xs font-semibold flex-shrink-0 ${
-                  c.progress >= 80 ? "text-emerald-400"
-                  : c.progress >= 50 ? "text-amber-400"
+                  c.progress >= 80 ? "text-success"
+                  : c.progress >= 50 ? "text-warning"
                   : "text-primary"
                 }`}>
                   {c.progress}%
@@ -268,7 +268,7 @@ function StudentsModal({ onClose }: { onClose: () => void }) {
           )}
 
           {error && (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-400">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
               Failed to load student data.
             </div>
           )}
@@ -328,7 +328,7 @@ export default function AdminDashboard() {
     },
     { icon: BookOpen,      label: "Active Courses",  value: stats?.activeCourses ?? "—",           color: "text-accent",       bg: "bg-accent/10",      border: "border-accent/20",      clickable: false },
     { icon: ClipboardList, label: "Quiz Attempts",   value: stats?.totalQuizAttempts ?? "—",       color: "text-blue-400",     bg: "bg-blue-400/10",    border: "border-blue-400/20",    clickable: false },
-    { icon: TrendingUp,    label: "Average Engagement",  value: stats ? `${stats.avgEngagement}%` : "—", color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20", clickable: false },
+    { icon: TrendingUp,    label: "Average Engagement",  value: stats ? `${stats.avgEngagement}%` : "—", color: "text-success", bg: "bg-success/10", border: "border-success/20", clickable: false },
   ];
 
   if (isLoading) {
@@ -363,7 +363,7 @@ export default function AdminDashboard() {
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.bg} border ${s.border} ${s.color}`}>
                     <s.icon className="h-5 w-5" />
                   </div>
-                  <span className="text-xs font-medium flex items-center gap-0.5 text-emerald-400">
+                  <span className="text-xs font-medium flex items-center gap-0.5 text-success">
                     <ArrowUpRight className="h-3 w-3" />live
                   </span>
                 </div>

@@ -13,7 +13,7 @@ function StarRating({ rating }: { rating: number }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}
-          className={`h-3.5 w-3.5 ${i <= rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`}
+          className={`h-3.5 w-3.5 ${i <= rating ? "text-warning fill-warning" : "text-muted-foreground/30"}`}
         />
       ))}
     </div>
@@ -51,7 +51,7 @@ export default function LecturerFeedbackInbox() {
         </div>
         <div className="flex gap-3">
           <div className="text-right">
-            <p className="text-2xl font-bold font-display text-amber-500">{avgRating}</p>
+            <p className="text-2xl font-bold font-display text-warning">{avgRating}</p>
             <p className="text-xs text-muted-foreground">Average Rating</p>
           </div>
           {unread > 0 && (

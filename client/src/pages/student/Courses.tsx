@@ -34,9 +34,9 @@ const SORT_OPTIONS = [
 ];
 
 const difficultyConfig: Record<string, { label: string; class: string }> = {
-  beginner:     { label: "Beginner",     class: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  intermediate: { label: "Intermediate", class: "bg-amber-50 text-amber-700 border-amber-200"   },
-  advanced:     { label: "Advanced",     class: "bg-rose-50 text-rose-700 border-rose-200"     },
+  beginner:     { label: "Beginner",     class: "bg-success/10 text-success border-success/20" },
+  intermediate: { label: "Intermediate", class: "bg-warning/10 text-warning border-warning/20"   },
+  advanced:     { label: "Advanced",     class: "bg-destructive/10 text-destructive border-destructive/20"     },
 };
 
 const formatIcons: Record<string, typeof PlayCircle> = {
@@ -333,7 +333,7 @@ export default function Courses() {
                           </p>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
-                              <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                              <Star className="h-3 w-3 text-warning fill-warning" />
                               {course.rating}
                             </span>
                             <span className="flex items-center gap-1">

@@ -79,9 +79,9 @@ function SourceIcon({ source }: { source: string }) {
 
 function DifficultyBadge({ level }: { level: string }) {
   const colors: Record<string, string> = {
-    beginner: "text-emerald-700 bg-emerald-50 border-emerald-200",
-    intermediate: "text-amber-700 bg-amber-50 border-amber-200",
-    advanced: "text-rose-700 bg-rose-50 border-rose-200",
+    beginner: "text-success bg-success/10 border-success/20",
+    intermediate: "text-warning bg-warning/10 border-warning/20",
+    advanced: "text-destructive bg-destructive/10 border-destructive/20",
   };
   return (
     <span
@@ -94,14 +94,14 @@ function DifficultyBadge({ level }: { level: string }) {
 
 function SourceBadge({ link }: { link: RecommendationLink }) {
   const colorMap: Record<string, string> = {
-    youtube: "text-red-400 bg-red-500/10 border-red-500/20 hover:bg-red-500/20",
-    documentation: "text-blue-400 bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20",
-    freecodecamp: "text-green-400 bg-green-500/10 border-green-500/20 hover:bg-green-500/20",
-    khan_academy: "text-teal-400 bg-teal-500/10 border-teal-500/20 hover:bg-teal-500/20",
-    wikipedia: "text-slate-400 bg-slate-500/10 border-slate-500/20 hover:bg-slate-500/20",
-    coursera: "text-sky-400 bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/20",
-    investopedia: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20",
-    blog: "text-purple-400 bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20",
+    youtube: "text-destructive bg-destructive/10 border-destructive/20 hover:bg-destructive/20",
+    documentation: "text-info bg-info/10 border-info/20 hover:bg-info/20",
+    freecodecamp: "text-success bg-success/10 border-success/20 hover:bg-success/20",
+    khan_academy: "text-primary bg-primary/10 border-primary/20 hover:bg-primary/20",
+    wikipedia: "text-muted-foreground bg-muted/50 border-border hover:bg-muted",
+    coursera: "text-info bg-info/10 border-info/20 hover:bg-info/20",
+    investopedia: "text-success bg-success/10 border-success/20 hover:bg-success/20",
+    blog: "text-accent bg-accent/10 border-accent/20 hover:bg-accent/20",
     other: "text-muted-foreground bg-muted/50 border-border hover:bg-muted",
   };
   const color = colorMap[link.source?.toLowerCase()] ?? colorMap.other;
@@ -123,9 +123,9 @@ function SourceBadge({ link }: { link: RecommendationLink }) {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 const levelColors: Record<string, string> = {
-  beginner: "text-emerald-700 bg-emerald-50 border-emerald-200",
-  intermediate: "text-amber-700 bg-amber-50 border-amber-200",
-  advanced: "text-rose-700 bg-rose-50 border-rose-200",
+  beginner: "text-success bg-success/10 border-success/20",
+  intermediate: "text-warning bg-warning/10 border-warning/20",
+  advanced: "text-destructive bg-destructive/10 border-destructive/20",
 };
 
 export default function Recommendations() {

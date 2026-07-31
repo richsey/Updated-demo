@@ -79,10 +79,10 @@ export default function LecturerAnnouncements() {
 
       {/* Create form */}
       {showForm && (
-        <Card className="border-emerald-500/30 bg-emerald-50/30">
+        <Card className="border-success/30 bg-success/10">
           <CardHeader className="pb-3">
             <CardTitle className="font-display text-base flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-emerald-600" /> New Announcement
+              <Megaphone className="h-4 w-4 text-success" /> New Announcement
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -155,13 +155,13 @@ export default function LecturerAnnouncements() {
       ) : (
         <div className="space-y-4">
           {announcements.map((ann) => (
-            <Card key={ann.id} className={`border-border/60 ${ann.is_pinned ? "border-emerald-500/30 bg-emerald-50/20" : ""}`}>
+            <Card key={ann.id} className={`border-border/60 ${ann.is_pinned ? "border-success/30 bg-success/10" : ""}`}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       {ann.is_pinned && (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1 text-xs">
+                        <Badge className="bg-success/10 text-success border-success/20 gap-1 text-xs">
                           <Pin className="h-2.5 w-2.5" /> Pinned
                         </Badge>
                       )}

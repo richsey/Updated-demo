@@ -12,11 +12,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  draft:            { label: "Draft",            color: "bg-slate-100 text-slate-700 border-slate-200",   icon: Clock          },
-  pending_approval: { label: "Pending Review",   color: "bg-amber-50 text-amber-700 border-amber-200",    icon: AlertCircle    },
-  published:        { label: "Published",        color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
-  rejected:         { label: "Rejected",         color: "bg-rose-50 text-rose-700 border-rose-200",       icon: AlertCircle    },
-  archived:         { label: "Archived",         color: "bg-slate-50 text-slate-500 border-slate-200",    icon: Archive        },
+  draft:            { label: "Draft",            color: "bg-muted text-muted-foreground border-border",   icon: Clock          },
+  pending_approval: { label: "Pending Review",   color: "bg-warning/10 text-warning border-warning/20",    icon: AlertCircle    },
+  published:        { label: "Published",        color: "bg-success/10 text-success border-success/20", icon: CheckCircle2 },
+  rejected:         { label: "Rejected",         color: "bg-destructive/10 text-destructive border-destructive/20",       icon: AlertCircle    },
+  archived:         { label: "Archived",         color: "bg-muted/50 text-muted-foreground border-border",    icon: Archive        },
 };
 
 export default function LecturerDashboard() {
@@ -69,19 +69,19 @@ export default function LecturerDashboard() {
   const stats = [
     {
       icon: BookOpen, label: "Total Courses", value: loadingCourses ? "—" : courses.length,
-      color: "text-emerald-600", bg: "bg-emerald-500/10", border: "border-emerald-500/20",
+      color: "text-success", bg: "bg-success/10", border: "border-success/20",
     },
     {
       icon: Users, label: "Total Students", value: loadingStudents ? "—" : studentCount,
-      color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20",
+      color: "text-info", bg: "bg-info/10", border: "border-info/20",
     },
     {
       icon: ClipboardList, label: "Quizzes Created", value: quizCount,
-      color: "text-violet-600", bg: "bg-violet-500/10", border: "border-violet-500/20",
+      color: "text-accent", bg: "bg-accent/10", border: "border-accent/20",
     },
     {
       icon: TrendingUp, label: "Published Courses", value: publishedCourses.length,
-      color: "text-amber-600", bg: "bg-amber-500/10", border: "border-amber-500/20",
+      color: "text-warning", bg: "bg-warning/10", border: "border-warning/20",
     },
   ];
 
@@ -91,8 +91,8 @@ export default function LecturerDashboard() {
       <div className="flex items-end justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-700 text-xs font-medium px-2.5 py-1 rounded-full">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 bg-success/10 text-success text-xs font-medium px-2.5 py-1 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
               Lecturer Account
             </span>
           </div>
@@ -188,9 +188,9 @@ export default function LecturerDashboard() {
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: "Published",      count: publishedCourses.length,   color: "bg-emerald-500" },
-                { label: "Pending Review", count: pendingCourses.length,     color: "bg-amber-500" },
-                { label: "Drafts",         count: draftCourses.length,       color: "bg-slate-400" },
+                { label: "Published",      count: publishedCourses.length,   color: "bg-success" },
+                { label: "Pending Review", count: pendingCourses.length,     color: "bg-warning" },
+                { label: "Drafts",         count: draftCourses.length,       color: "bg-muted-foreground" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
@@ -215,8 +215,8 @@ export default function LecturerDashboard() {
                 { to: "/lecturer/announcements",  label: "Post Announcement", icon: Users         },
               ].map((action) => (
                 <Link key={action.to} to={action.to}>
-                  <Button variant="outline" className="w-full justify-start gap-2 h-9 text-sm border-border/60 hover:border-emerald-500/30 hover:bg-emerald-50/50">
-                    <action.icon className="h-3.5 w-3.5 text-emerald-600" />
+                  <Button variant="outline" className="w-full justify-start gap-2 h-9 text-sm border-border/60 hover:border-success/30 hover:bg-success/10">
+                    <action.icon className="h-3.5 w-3.5 text-success" />
                     {action.label}
                   </Button>
                 </Link>

@@ -120,7 +120,7 @@ export default function LecturerUploadMaterial() {
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading courses…
                 </div>
               ) : eligibleCourses.length === 0 ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                <div className="rounded-lg border border-warning/20 bg-warning/10 p-3 text-sm text-warning">
                   You have no courses yet.{" "}
                   <Link to="/lecturer/courses/new" className="underline font-medium">Create one first.</Link>
                 </div>
@@ -163,7 +163,7 @@ export default function LecturerUploadMaterial() {
                   onClick={() => setUploadMethod("file")}
                   className={`flex-1 flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm transition-all ${
                     uploadMethod === "file"
-                      ? "border-emerald-500/40 bg-emerald-50 text-emerald-700 font-medium"
+                      ? "border-success/40 bg-success/10 text-success font-medium"
                       : "border-border/60 text-muted-foreground hover:bg-muted/30"
                   }`}
                 >
@@ -174,7 +174,7 @@ export default function LecturerUploadMaterial() {
                   onClick={() => setUploadMethod("url")}
                   className={`flex-1 flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm transition-all ${
                     uploadMethod === "url"
-                      ? "border-emerald-500/40 bg-emerald-50 text-emerald-700 font-medium"
+                      ? "border-success/40 bg-success/10 text-success font-medium"
                       : "border-border/60 text-muted-foreground hover:bg-muted/30"
                   }`}
                 >
@@ -187,12 +187,12 @@ export default function LecturerUploadMaterial() {
               <div className="space-y-2">
                 <Label>File</Label>
                 <div
-                  className="rounded-xl border-2 border-dashed border-border/60 bg-muted/20 p-8 text-center cursor-pointer hover:border-emerald-500/40 hover:bg-emerald-50/30 transition-all"
+                  className="rounded-xl border-2 border-dashed border-border/60 bg-muted/20 p-8 text-center cursor-pointer hover:border-success/40 hover:bg-success/10 transition-all"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   {selectedFile ? (
                     <div className="space-y-1">
-                      <FileText className="h-8 w-8 text-emerald-600 mx-auto" />
+                      <FileText className="h-8 w-8 text-success mx-auto" />
                       <p className="text-sm font-medium">{selectedFile.name}</p>
                       <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>

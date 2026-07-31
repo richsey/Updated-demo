@@ -31,9 +31,9 @@ import {
 import { toast } from "@/hooks/use-toast";
 
 const ROLE_CONFIG: Record<string, { label: string; icon: typeof User; badge: string }> = {
-  student:  { label: "Student",  icon: User,           badge: "bg-blue-100 text-blue-700 border-blue-200"   },
-  lecturer: { label: "Lecturer", icon: GraduationCap,  badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  admin:    { label: "Admin",    icon: Shield,          badge: "bg-violet-100 text-violet-700 border-violet-200" },
+  student:  { label: "Student",  icon: User,           badge: "bg-info/10 text-info border-info/20"   },
+  lecturer: { label: "Lecturer", icon: GraduationCap,  badge: "bg-success/10 text-success border-success/20" },
+  admin:    { label: "Admin",    icon: Shield,          badge: "bg-primary/10 text-primary border-primary/20" },
 };
 
 export default function AdminManageUsers() {
@@ -188,10 +188,10 @@ export default function AdminManageUsers() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
         {[
-          { label: "All Users", count: roleCounts.all, icon: Users, color: "text-slate-600", bg: "bg-slate-500/10", border: "border-slate-500/20" },
-          { label: "Students", count: roleCounts.student, icon: User, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-          { label: "Lecturers", count: roleCounts.lecturer, icon: GraduationCap, color: "text-emerald-600", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-          { label: "Admins", count: roleCounts.admin, icon: Shield, color: "text-violet-600", bg: "bg-violet-500/10", border: "border-violet-500/20" },
+          { label: "All Users", count: roleCounts.all, icon: Users, color: "text-foreground", bg: "bg-foreground/10", border: "border-foreground/20" },
+          { label: "Students", count: roleCounts.student, icon: User, color: "text-info", bg: "bg-info/10", border: "border-info/20" },
+          { label: "Lecturers", count: roleCounts.lecturer, icon: GraduationCap, color: "text-success", bg: "bg-success/10", border: "border-success/20" },
+          { label: "Admins", count: roleCounts.admin, icon: Shield, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
         ].map((s) => (
           <Card key={s.label} className={`border ${s.border} cursor-pointer transition-all hover:shadow-sm`}
             onClick={() => setRoleFilter(s.label === "All Users" ? "all" : s.label.toLowerCase())}>
@@ -262,7 +262,7 @@ export default function AdminManageUsers() {
                   <div
                     key={user.id}
                     className={`flex items-center gap-4 p-3 rounded-xl border transition-colors ${
-                      isSuspended ? "border-rose-200 bg-rose-50/30 opacity-70" : "border-border/50 bg-card/60 hover:bg-card"
+                      isSuspended ? "border-destructive/30 bg-destructive/10 opacity-70" : "border-border/50 bg-card/60 hover:bg-card"
                     }`}
                   >
                     {/* Avatar */}
@@ -278,7 +278,7 @@ export default function AdminManageUsers() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold truncate">{user.full_name ?? "—"}</p>
-                        {isSuspended && <Badge className="bg-rose-100 text-rose-700 border-rose-200 text-[10px]">Suspended</Badge>}
+                        {isSuspended && <Badge className="bg-destructive/10 text-destructive border-destructive/20 text-[10px]">Suspended</Badge>}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
@@ -310,7 +310,7 @@ export default function AdminManageUsers() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 text-xs gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                          className="h-8 text-xs gap-1 border-success/30 text-success hover:bg-success/10"
                           onClick={() => activateMutation.mutate(user.id)}
                           disabled={activateMutation.isPending}
                         >
@@ -321,7 +321,7 @@ export default function AdminManageUsers() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 text-xs gap-1 border-rose-300 text-rose-700 hover:bg-rose-50"
+                          className="h-8 text-xs gap-1 border-destructive/30 text-destructive hover:bg-destructive/10"
                           onClick={() => suspendMutation.mutate(user.id)}
                           disabled={suspendMutation.isPending}
                         >
@@ -336,7 +336,7 @@ export default function AdminManageUsers() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 w-8 p-0 border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-8 w-8 p-0 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={user.role === "admin" || deleteMutation.isPending}
                             title={user.role === "admin" ? "Admins cannot be deleted" : "Delete User"}
                           >
@@ -360,7 +360,7 @@ export default function AdminManageUsers() {
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => deleteMutation.mutate(user.id)}
-                              className="bg-rose-600 hover:bg-rose-700 text-white"
+                              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                             >
                               Yes, Delete
                             </AlertDialogAction>

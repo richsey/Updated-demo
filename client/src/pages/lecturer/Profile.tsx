@@ -126,14 +126,14 @@ export default function LecturerProfile() {
                   className="h-20 w-20 rounded-2xl object-cover border border-border/60"
                 />
               ) : (
-                <div className="h-20 w-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-emerald-600">{initials}</span>
+                <div className="h-20 w-20 rounded-2xl bg-success/10 border border-success/20 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-success">{initials}</span>
                 </div>
               )}
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-success text-white shadow-sm hover:brightness-110 transition-all"
               >
                 {uploadingAvatar ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
               </button>
@@ -142,7 +142,7 @@ export default function LecturerProfile() {
             <div>
               <p className="font-semibold text-lg">{form.full_name || "Your Name"}</p>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
-              <Badge className="mt-1 capitalize bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-xs">
+              <Badge className="mt-1 capitalize bg-success/10 text-success border-success/20 text-xs">
                 {profile?.role ?? "lecturer"}
               </Badge>
             </div>
@@ -154,7 +154,7 @@ export default function LecturerProfile() {
       <Card className="border-border/60">
         <CardHeader className="pb-3">
           <CardTitle className="font-display text-base flex items-center gap-2">
-            <User className="h-4 w-4 text-emerald-600" /> Personal Information
+            <User className="h-4 w-4 text-success" /> Personal Information
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -219,7 +219,7 @@ export default function LecturerProfile() {
       <Card className="border-border/60">
         <CardHeader className="pb-3">
           <CardTitle className="font-display text-base flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-emerald-600" /> Change Password
+            <KeyRound className="h-4 w-4 text-success" /> Change Password
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -246,7 +246,7 @@ export default function LecturerProfile() {
                 className="border-border/60"
               />
             </div>
-            <Button type="submit" variant="outline" className="border-emerald-500/30 text-emerald-700 hover:bg-emerald-50" disabled={updatingPassword}>
+            <Button type="submit" variant="outline" className="border-success/30 text-success hover:bg-success/10" disabled={updatingPassword}>
               {updatingPassword ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating…</> : "Update Password"}
             </Button>
           </form>
@@ -254,7 +254,7 @@ export default function LecturerProfile() {
       </Card>
 
       <Button
-        className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 w-full sm:w-auto"
+        className="gradient-primary text-white border-0 w-full sm:w-auto glow-sm"
         onClick={() => saveMutation.mutate()}
         disabled={saveMutation.isPending}
       >

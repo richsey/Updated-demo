@@ -9,7 +9,7 @@ import { Users, Search, TrendingUp, BookOpen, Loader2 } from "lucide-react";
 
 function ProgressBar({ value }: { value: number }) {
   const color =
-    value >= 80 ? "bg-emerald-500" : value >= 50 ? "bg-amber-500" : value >= 20 ? "bg-primary" : "bg-muted-foreground/40";
+    value >= 80 ? "bg-success" : value >= 50 ? "bg-warning" : value >= 20 ? "bg-primary" : "bg-muted-foreground/40";
   return (
     <div className="h-1.5 w-full rounded-full bg-muted/40 overflow-hidden">
       <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.min(value, 100)}%` }} />
@@ -51,9 +51,9 @@ export default function LecturerStudentProgress() {
       {/* Summary stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { icon: Users, label: "Unique Students", value: uniqueStudents, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-          { icon: BookOpen, label: "Enrollments", value: students.length, color: "text-emerald-600", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-          { icon: TrendingUp, label: "Average Progress", value: `${avgProgress}%`, color: "text-violet-600", bg: "bg-violet-500/10", border: "border-violet-500/20" },
+          { icon: Users, label: "Unique Students", value: uniqueStudents, color: "text-info", bg: "bg-info/10", border: "border-info/20" },
+          { icon: BookOpen, label: "Enrollments", value: students.length, color: "text-success", bg: "bg-success/10", border: "border-success/20" },
+          { icon: TrendingUp, label: "Average Progress", value: `${avgProgress}%`, color: "text-accent", bg: "bg-accent/10", border: "border-accent/20" },
         ].map((s) => (
           <Card key={s.label} className={`border ${s.border} relative overflow-hidden`}>
             <div className={`absolute top-0 right-0 h-16 w-16 ${s.bg} rounded-full -translate-y-1/2 translate-x-1/2 blur-xl opacity-60`} />
@@ -119,7 +119,7 @@ export default function LecturerStudentProgress() {
                         <p className="text-xs text-muted-foreground truncate">{student.email}</p>
                       </div>
                       <span className={`text-xs font-bold flex-shrink-0 ${
-                        student.progress >= 80 ? "text-emerald-600" : student.progress >= 50 ? "text-amber-600" : "text-muted-foreground"
+                        student.progress >= 80 ? "text-success" : student.progress >= 50 ? "text-warning" : "text-muted-foreground"
                       }`}>
                         {student.progress}%
                       </span>
@@ -128,7 +128,7 @@ export default function LecturerStudentProgress() {
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{student.course_title}</Badge>
                       {student.progress === 100 && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 border-emerald-200">Completed</Badge>
+                        <Badge className="text-[10px] px-1.5 py-0 bg-success/10 text-success border-success/20">Completed</Badge>
                       )}
                     </div>
                   </div>
