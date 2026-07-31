@@ -126,7 +126,7 @@ export default function CourseDetails() {
                 </p>
               )}
 
-              {quiz && (
+              {quiz ? (
                 <div className="flex flex-col items-center gap-2">
                   {progress >= 100 ? (
                     <Button asChild className="gradient-primary border-0 glow-sm hover:opacity-90 transition-opacity">
@@ -144,6 +144,15 @@ export default function CourseDetails() {
                       </p>
                     </>
                   )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Button disabled variant="outline" className="border-border/60 opacity-60 cursor-not-allowed">
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> No Quiz Available
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    This course doesn't have a quiz
+                  </p>
                 </div>
               )}
             </div>
