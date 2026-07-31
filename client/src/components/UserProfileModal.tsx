@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { User, Mail, KeyRound, ShieldCheck, Loader2 } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { isPasswordValid } from "@/components/ui/PasswordStrength";
 
 interface UserProfileModalProps {
   trigger?: React.ReactNode;
@@ -34,8 +36,8 @@ export function UserProfileModal({ trigger, isOpen, onOpenChange }: UserProfileM
       toast.error("Please enter a new password.");
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters long.");
+    if (!isPasswordValid(newPassword)) {
+      toast.error("Password does not meet the security requirements.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -122,9 +124,8 @@ export function UserProfileModal({ trigger, isOpen, onOpenChange }: UserProfileM
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-password">New Password</Label>
-              <Input
+              <PasswordInput
                 id="new-password"
-                type="password"
                 placeholder="••••••••"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -134,9 +135,8 @@ export function UserProfileModal({ trigger, isOpen, onOpenChange }: UserProfileM
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirm-password">Confirm Password</Label>
-              <Input
+              <PasswordInput
                 id="confirm-password"
-                type="password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { PasswordStrength, isPasswordValid } from "@/components/ui/PasswordStrength";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -19,8 +21,8 @@ export default function Register() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (!isPasswordValid(password)) {
+      setError("Please ensure your password meets all requirements.");
       return;
     }
 
@@ -137,16 +139,15 @@ export default function Register() {
               disabled={loading}
               className="w-full h-11 rounded-xl bg-secondary/50 border border-border/60 px-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors disabled:opacity-50"
             />
-            <input
+            <PasswordInput
               id="password"
-              type="password"
-              placeholder="Password (min. 6 characters)"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
-              className="w-full h-11 rounded-xl bg-secondary/50 border border-border/60 px-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors disabled:opacity-50"
             />
+            {password && <PasswordStrength password={password} />}
 
             <Button
               type="submit"

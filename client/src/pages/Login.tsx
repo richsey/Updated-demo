@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { roleHomePath } from "@/components/ProtectedRoute";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -71,15 +72,13 @@ export default function Login() {
             disabled={loading}
             className="w-full h-11 rounded-xl bg-secondary/50 border border-border/60 px-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors disabled:opacity-50"
           />
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={loading}
-            className="w-full h-11 rounded-xl bg-secondary/50 border border-border/60 px-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-colors disabled:opacity-50"
           />
 
           <Button

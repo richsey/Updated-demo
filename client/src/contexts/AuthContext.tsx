@@ -12,6 +12,7 @@ import {
   ensureProfileExists,
 } from "@/lib/api/profiles";
 import CacheManager from "@/lib/cache";
+import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 
 interface Profile {
   id: string;
@@ -272,6 +273,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfileCache = (updates: Partial<Profile>) => {
     setProfile((prev) => (prev ? { ...prev, ...updates } : prev));
   };
+
+  // Automatically log out if the user is inactive for 30 minutes
+  useInactivityTimeout(
+    () => {
+      console.log("[Auth] Inactivity timeout reached. Logging out.");
+      signOut();
+    },
+    30, // 30 minutes
+    !!user // Only run the timeout when the user is actually logged in
+  );
 
   return (
     <AuthContext.Provider

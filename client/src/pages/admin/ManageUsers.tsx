@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Badge } from "@/components/ui/badge";
 import {
   Users, Search, Shield, GraduationCap, User, Loader2,
@@ -151,11 +152,10 @@ export default function AdminManageUsers() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Password</label>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={addForm.password}
                   onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
-                  placeholder="Minimum 6 characters"
+                  placeholder="Minimum 8 characters"
                 />
               </div>
               <div className="space-y-2">

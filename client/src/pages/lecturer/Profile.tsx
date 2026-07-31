@@ -12,6 +12,8 @@ import {
   User, Mail, Phone, BookOpen, Camera, Loader2, KeyRound,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { isPasswordValid } from "@/components/ui/PasswordStrength";
 
 export default function LecturerProfile() {
   const { user, profile, updateProfileCache } = useAuth();
@@ -83,8 +85,8 @@ export default function LecturerProfile() {
       toast({ title: "Enter a new password.", variant: "destructive" });
       return;
     }
-    if (newPassword.length < 6) {
-      toast({ title: "Password must be at least 6 characters.", variant: "destructive" });
+    if (!isPasswordValid(newPassword)) {
+      toast({ title: "Password does not meet the security requirements.", variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -226,9 +228,8 @@ export default function LecturerProfile() {
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>
-              <Input
+              <PasswordInput
                 id="new-password"
-                type="password"
                 placeholder="••••••••"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -237,9 +238,8 @@ export default function LecturerProfile() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm Password</Label>
-              <Input
+              <PasswordInput
                 id="confirm-password"
-                type="password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

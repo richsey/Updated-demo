@@ -61,6 +61,14 @@ router.post("/create-user", async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
+    // Password Policy Validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/~`\-]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        error: "Password must be at least 8 characters long, contain an uppercase letter, a lowercase letter, a number, and a special character." 
+      });
+    }
+
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -186,6 +194,14 @@ router.post("/register", async (req, res) => {
 
     if (!email || !password || !fullName) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Password Policy Validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/~`\-]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        error: "Password must be at least 8 characters long, contain an uppercase letter, a lowercase letter, a number, and a special character." 
+      });
     }
 
     // Generate a 6-digit verification code
