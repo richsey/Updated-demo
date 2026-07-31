@@ -107,6 +107,7 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
         try {
           // Increment active time
           setActiveTimeSeconds(prev => prev + 1);
+          document.dispatchEvent(new Event("videoActivity"));
 
           const currentTime = Math.floor(playerRef.current.getCurrentTime());
           const totalDuration = playerRef.current.getDuration() || durationMinutes * 60;

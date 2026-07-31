@@ -40,8 +40,8 @@ export function useInactivityTimeout(
       }
     };
 
-    // Track common user interactions
-    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+    // Track common user interactions, including custom video activity
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "videoActivity"];
     events.forEach((event) =>
       document.addEventListener(event, updateActivity, { passive: true })
     );
