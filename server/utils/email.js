@@ -29,27 +29,11 @@ export const sendVerificationEmail = async (toEmail, code) => {
   };
 
   try {
-    // If testing locally or on Railway without a proper SMTP provider, 
-    // you can set MOCK_EMAIL=true in your .env to bypass SMTP entirely.
-    if (process.env.MOCK_EMAIL === 'true') {
-      console.log(`[MOCK EMAIL] Verification code for ${toEmail} is: ${code}`);
-      return true;
-    }
-
     const info = await transporter.sendMail(mailOptions);
     console.log(`[Email] Verification sent to ${toEmail}: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error(`[Email] Failed to send to ${toEmail}:`, error.message);
-    // FALLBACK: If Railway blocks the port, we still allow the user to register
-    // by printing the code to the Railway logs so they can copy-paste it.
-    console.log(`\n======================================================`);
-    console.log(`⚠️ SMTP FAILED - MOCK FALLBACK ⚠️`);
-    console.log(`The verification code for ${toEmail} is: ${code}`);
-    console.log(`======================================================\n`);
-    
-    // We return true here so the frontend can proceed to the verification screen
-    // instead of throwing a 500 error and halting the registration flow.
-    return true;
+    console.error(`[Email] Failed to send to ${toEmail}:`, error);
+    return false;
   }
 };
