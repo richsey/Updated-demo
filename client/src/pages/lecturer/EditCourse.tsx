@@ -8,7 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, BookOpen, ArrowLeft, Trash, Pencil, X, Check, Save } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, BookOpen, ArrowLeft, Trash, Pencil, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const CATEGORIES = ["Frontend", "Backend", "Languages", "Styling", "Database", "DevOps", "Mobile", "AI/ML", "General"];
@@ -287,19 +298,36 @@ export default function EditCourse() {
                             <Button size="sm" variant="outline" className="flex-1 h-7 text-xs border-border/60" onClick={() => startEditingMaterial(mat)}>
                               <Pencil className="h-3 w-3 mr-1" /> Edit
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              className="h-7 w-7 p-0" 
-                              onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this material?")) {
-                                  deleteMaterialMutation.mutate(mat.id);
-                                }
-                              }}
-                              disabled={deleteMaterialMutation.isPending}
-                            >
-                              {deleteMaterialMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash className="h-3 w-3" />}
-                            </Button>
+                            
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive" 
+                                  className="h-7 w-7 p-0" 
+                                  disabled={deleteMaterialMutation.isPending}
+                                >
+                                  {deleteMaterialMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash className="h-3 w-3" />}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently remove the material "{mat.title}" from this course.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => deleteMaterialMutation.mutate(mat.id)}
+                                  >
+                                    Delete Material
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </>
                       )}
