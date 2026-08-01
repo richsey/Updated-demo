@@ -2,9 +2,12 @@ import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, CheckCircle2, Sparkles, PlayCircle, Code, ArrowRight, BrainCircuit, X, Zap, Clock, TimerOff, Info, ExternalLink, Youtube, Lock } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, Sparkles, PlayCircle, Code, ArrowRight, BrainCircuit, X, Zap, Clock, TimerOff, Info, ExternalLink, Youtube, Lock, Bookmark } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { isBookmarked, addBookmark, removeBookmark } from "@/lib/api/bookmarks";
+import { useToast } from "@/hooks/use-toast";
 import {
   trackLessonAbandonment,
   trackPdfIgnored,
@@ -19,10 +22,36 @@ import { useProgressTracking } from "@/hooks/useProgressTracking";
 export default function LearningMaterial() {
   const { materialId } = useParams();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: materialData, isLoading } = useMaterial(materialId);
   const material = materialData;
   const { data: quiz } = useQuizByCourse(material?.course_id);
   const { data: courseProgress = 0 } = useCourseProgress(material?.course_id);
+  
+  const { data: bookmarked = false } = useQuery({
+    queryKey: ["bookmark", user?.id, materialId],
+    queryFn: () => isBookmarked(user!.id, materialId!),
+    enabled: !!user?.id && !!materialId,
+  });
+
+  const toggleBookmark = useMutation({
+    mutationFn: async () => {
+      if (bookmarked) {
+        await removeBookmark(user!.id, materialId!);
+      } else {
+        await addBookmark(user!.id, materialId!);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookmark", user?.id, materialId] });
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      toast({ title: bookmarked ? "Bookmark removed" : "Bookmark added" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update bookmark", variant: "destructive" });
+    }
+  });
   
   const [needsFormatShift, setNeedsFormatShift] = useState(false);
   const [showVideoAnyway, setShowVideoAnyway] = useState(false);
@@ -143,6 +172,15 @@ export default function LearningMaterial() {
             {material.type}
           </p>
         </div>
+        <Button
+          variant={bookmarked ? "default" : "outline"}
+          size="icon"
+          onClick={() => toggleBookmark.mutate()}
+          disabled={toggleBookmark.isPending}
+          className="rounded-xl h-11 w-11 shadow-sm"
+        >
+          <Bookmark className={`h-5 w-5 ${bookmarked ? "fill-current" : ""}`} />
+        </Button>
       </div>
 
       <div className="relative group">

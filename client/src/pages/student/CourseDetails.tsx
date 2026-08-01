@@ -1,10 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Star, Users, PlayCircle, Code, ArrowLeft, Lock, CheckCircle2, BookOpen, Loader2 } from "lucide-react";
+import { Clock, Star, Users, PlayCircle, Code, ArrowLeft, Lock, CheckCircle2, BookOpen, Loader2, Bookmark } from "lucide-react";
 import { useCourse, useQuizByCourse, useCourseProgress } from "@/hooks/useSupabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchBookmarks, addBookmark, removeBookmark } from "@/lib/api/bookmarks";
+import { useToast } from "@/hooks/use-toast";
 import { computeCourseProgress, syncCourseProgress } from "@/lib/api/progress";
 import { fetchCourseProgressAPI, fetchCompletedMaterialsAPI } from "@/hooks/useProgressTracking";
 
@@ -17,10 +20,38 @@ const typeConfig = {
 export default function CourseDetails() {
   const { courseId } = useParams();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: courseData, isLoading } = useCourse(courseId);
   const course = courseData;
   const { data: quiz } = useQuizByCourse(courseId);
   const [completedMaterialIds, setCompletedMaterialIds] = useState<Set<string>>(new Set());
+
+  const { data: bookmarksData = [] } = useQuery({
+    queryKey: ["bookmarks", user?.id],
+    queryFn: () => fetchBookmarks(user!.id),
+    enabled: !!user?.id,
+  });
+
+  const bookmarkedMaterialIds = new Set(bookmarksData.map((b: any) => b.material_id));
+
+  const toggleBookmark = useMutation({
+    mutationFn: async ({ materialId, isBookmarked }: { materialId: string, isBookmarked: boolean }) => {
+      if (isBookmarked) {
+        await removeBookmark(user!.id, materialId);
+      } else {
+        await addBookmark(user!.id, materialId);
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmark", user?.id, variables.materialId] });
+      toast({ title: variables.isBookmarked ? "Bookmark removed" : "Bookmark added" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update bookmark", variant: "destructive" });
+    }
+  });
 
   useEffect(() => {
     if (!user?.id || !course?.id) return;
@@ -180,6 +211,21 @@ export default function CourseDetails() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-transparent"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleBookmark.mutate({ 
+                        materialId: mat.id, 
+                        isBookmarked: bookmarkedMaterialIds.has(mat.id) 
+                      });
+                    }}
+                    disabled={toggleBookmark.isPending}
+                  >
+                    <Bookmark className={`h-4 w-4 ${bookmarkedMaterialIds.has(mat.id) ? "fill-primary text-primary" : "text-muted-foreground hover:text-foreground"}`} />
+                  </Button>
                   {completedMaterialIds.has(mat.id) && (
                     <CheckCircle2 className="h-4 w-4 text-primary" />
                   )}
