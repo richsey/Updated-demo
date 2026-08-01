@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCourses } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Loader2, Upload, Link as LinkIcon, FileText } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateCoursesCache } from "@/lib/api/courses";
@@ -38,13 +38,41 @@ export default function UploadMaterial() {
       // Auto-guess duration
       if (!duration) {
         if (file.type.startsWith("video/")) {
-          setDuration("10"); // placeholder for video
+          const videoNode = document.createElement("video");
+          videoNode.preload = "metadata";
+          videoNode.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(videoNode.src);
+            const durationMins = Math.ceil(videoNode.duration / 60);
+            setDuration(durationMins.toString());
+          };
+          videoNode.src = URL.createObjectURL(file);
         } else {
           setDuration("5"); // placeholder for reading
         }
       }
     }
   };
+
+  // Auto-fetch YouTube duration
+  useEffect(() => {
+    if (uploadMethod === "url" && (url.includes("youtube.com") || url.includes("youtu.be"))) {
+      const fetchDuration = async () => {
+        try {
+          const res = await fetch(`http://localhost:5001/api/metadata/youtube-duration?url=${encodeURIComponent(url)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.durationMinutes) {
+              setDuration(data.durationMinutes.toString());
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch YT duration", e);
+        }
+      };
+      const timeoutId = setTimeout(fetchDuration, 800);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [url, uploadMethod]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

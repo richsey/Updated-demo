@@ -38,6 +38,7 @@ import StudentAnnouncements from "./pages/student/Announcements";
 import LecturerDashboard from "./pages/lecturer/Dashboard";
 import LecturerMyCourses from "./pages/lecturer/MyCourses";
 import LecturerCreateCourse from "./pages/lecturer/CreateCourse";
+import LecturerEditCourse from "./pages/lecturer/EditCourse";
 import LecturerUploadMaterial from "./pages/lecturer/UploadMaterial";
 import LecturerQuizBuilder from "./pages/lecturer/QuizBuilder";
 import LecturerStudentProgress from "./pages/lecturer/StudentProgress";
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="/lecturer" element={<LecturerDashboard />} />
                 <Route path="/lecturer/courses" element={<LecturerMyCourses />} />
                 <Route path="/lecturer/courses/new" element={<LecturerCreateCourse />} />
+                <Route path="/lecturer/courses/:courseId/edit" element={<LecturerEditCourse />} />
                 <Route path="/lecturer/materials" element={<LecturerUploadMaterial />} />
                 <Route path="/lecturer/quizzes" element={<LecturerQuizBuilder />} />
                 <Route path="/lecturer/students" element={<LecturerStudentProgress />} />

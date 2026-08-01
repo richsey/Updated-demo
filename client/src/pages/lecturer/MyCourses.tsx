@@ -191,6 +191,11 @@ export default function LecturerMyCourses() {
                         <Archive className="h-3 w-3" /> Archive
                       </Button>
                     )}
+                    <Link to={`/lecturer/courses/${course.id}/edit`} className="flex-1 min-w-[30%]">
+                      <Button size="sm" variant="outline" className="w-full text-xs gap-1 border-border/60 text-foreground">
+                        <Pencil className="h-3 w-3" /> Edit Course
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

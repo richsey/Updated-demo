@@ -10,10 +10,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetchLecturerCourses } from "@/lib/api/lecturer";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Loader2, Upload, Link as LinkIcon, FileText, ArrowLeft } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 export default function LecturerUploadMaterial() {
   const { user } = useAuth();
@@ -25,7 +25,10 @@ export default function LecturerUploadMaterial() {
     enabled: !!user,
   });
 
-  const [courseId, setCourseId] = useState("");
+  const [searchParams] = useSearchParams();
+  const initialCourseId = searchParams.get("courseId") || "";
+
+  const [courseId, setCourseId] = useState(initialCourseId);
   const [matType, setMatType] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<"file" | "url">("file");
@@ -43,9 +46,43 @@ export default function LecturerUploadMaterial() {
         const cleanName = file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
         setTitle(cleanName);
       }
-      if (!duration) setDuration(file.type.startsWith("video/") ? "10" : "5");
+      if (!duration) {
+        if (file.type.startsWith("video/")) {
+          const videoNode = document.createElement("video");
+          videoNode.preload = "metadata";
+          videoNode.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(videoNode.src);
+            const durationMins = Math.ceil(videoNode.duration / 60);
+            setDuration(durationMins.toString());
+          };
+          videoNode.src = URL.createObjectURL(file);
+        } else {
+          setDuration("5");
+        }
+      }
     }
   };
+
+  // Auto-fetch YouTube duration
+  useEffect(() => {
+    if (uploadMethod === "url" && (url.includes("youtube.com") || url.includes("youtu.be"))) {
+      const fetchDuration = async () => {
+        try {
+          const res = await fetch(`http://localhost:5001/api/metadata/youtube-duration?url=${encodeURIComponent(url)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.durationMinutes) {
+              setDuration(data.durationMinutes.toString());
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch YT duration", e);
+        }
+      };
+      const timeoutId = setTimeout(fetchDuration, 800);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [url, uploadMethod]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -125,7 +162,7 @@ export default function LecturerUploadMaterial() {
                   <Link to="/lecturer/courses/new" className="underline font-medium">Create one first.</Link>
                 </div>
               ) : (
-                <Select value={courseId} onValueChange={setCourseId}>
+                <Select value={courseId} onValueChange={setCourseId} defaultValue={initialCourseId}>
                   <SelectTrigger className="border-border/60">
                     <SelectValue placeholder="Select a course" />
                   </SelectTrigger>

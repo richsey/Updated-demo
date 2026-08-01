@@ -107,6 +107,30 @@ export async function archiveCourse(courseId: string, lecturerId: string): Promi
   if (error) throw new Error(`Archive course failed: ${error.message}`);
 }
 
+/** Update an existing material */
+export async function updateMaterial(
+  materialId: string,
+  updates: Partial<{ title: string; url: string; duration_minutes: number }>
+): Promise<void> {
+  const { error } = await supabase
+    .from("materials")
+    // @ts-expect-error type generation mismatch
+    .update(updates)
+    .eq("id", materialId);
+
+  if (error) throw new Error(`Update material failed: ${error.message}`);
+}
+
+/** Delete a material */
+export async function deleteMaterial(materialId: string): Promise<void> {
+  const { error } = await supabase
+    .from("materials")
+    .delete()
+    .eq("id", materialId);
+
+  if (error) throw new Error(`Delete material failed: ${error.message}`);
+}
+
 interface LecturerStudentRow {
   user_id: string;
   full_name: string;
