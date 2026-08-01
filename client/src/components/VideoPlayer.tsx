@@ -37,6 +37,7 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
   const [replays, setReplays] = useState(0);
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const nativeVideoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
@@ -76,6 +77,20 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
     }
   };
 
+  const handleNativePlay = () => {
+    handlePlay();
+  };
+
+  const handleNativePause = () => {
+    setPauses(prev => prev + 1);
+  };
+
+  const handleNativeEnded = () => {
+    console.log("[VideoPlayer] Native Ended event triggered");
+    if (onEnded) onEnded();
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+  };
+
   const handleIframeLoad = () => {
     if (ytId && !playerRef.current && window.YT && window.YT.Player) {
       playerRef.current = new window.YT.Player(iframeRef.current, {
@@ -97,20 +112,28 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
     }
   };
 
-  // ─── 2. Struggle Detection & Sync ───────────────────────────────────────────
-  
   useEffect(() => {
-    if (isPlaying && ytId && user?.id) {
+    if (isPlaying && user?.id) {
       progressIntervalRef.current = setInterval(() => {
-        if (!playerRef.current || !playerRef.current.getCurrentTime || !playerRef.current.getDuration) return;
+        let currentTime = 0;
+        let totalDuration = 0;
+
+        if (ytId && playerRef.current && playerRef.current.getCurrentTime) {
+          currentTime = playerRef.current.getCurrentTime();
+          totalDuration = playerRef.current.getDuration() || durationMinutes * 60;
+        } else if (!ytId && nativeVideoRef.current) {
+          currentTime = nativeVideoRef.current.currentTime;
+          totalDuration = nativeVideoRef.current.duration || durationMinutes * 60;
+        } else {
+          return;
+        }
 
         try {
           // Increment active time
           setActiveTimeSeconds(prev => prev + 1);
           document.dispatchEvent(new Event("videoActivity"));
 
-          const currentTime = Math.floor(playerRef.current.getCurrentTime());
-          const totalDuration = playerRef.current.getDuration() || durationMinutes * 60;
+          currentTime = Math.floor(currentTime);
           const progressPct = totalDuration > 0 ? Math.min(100, Math.floor((currentTime / totalDuration) * 100)) : 0;
           
           if (currentTime > 0 && (currentTime % 10 === 0 || progressPct === 100)) {
@@ -146,12 +169,15 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
     };
   }, [isPlaying, ytId, user?.id, videoId, durationMinutes, onEnded, onStruggle, pauses, replays, activeTimeSeconds]);
 
-  if (!ytId) return <div className="p-4 text-red-500 text-center bg-red-500/10 rounded-xl border border-red-500/20">Invalid YouTube URL.</div>;
+  const isYouTube = !!ytId;
+  const isNativeVideo = !isYouTube && videoUrl;
+
+  if (!isYouTube && !isNativeVideo) return <div className="p-4 text-red-500 text-center bg-red-500/10 rounded-xl border border-red-500/20">Invalid video URL.</div>;
 
   return (
     <div className="space-y-4 w-full max-w-3xl mx-auto my-6">
       <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border bg-black shadow-2xl group transition-all duration-500">
-        {!isPlaying ? (
+        {!isPlaying && isYouTube ? (
           <div
             className="absolute inset-0 w-full h-full cursor-pointer flex items-center justify-center bg-cover bg-center transition-transform duration-700 hover:scale-[1.02]"
             style={{ backgroundImage: `url(${thumbnailUrl})` }}
@@ -162,23 +188,32 @@ export default function VideoPlayer({ videoId, videoUrl, durationMinutes, onEnde
               <svg className="w-8 h-8 text-white fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
             </div>
           </div>
-        ) : (
-          <>
-            <iframe
-              key={ytId}
-              ref={iframeRef}
-              width="100%"
-              height="100%"
-              src={embedUrl}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              onLoad={handleIframeLoad}
-              className="absolute left-0 top-0 opacity-100 transition-opacity duration-500"
-            />
-          </>
-        )}
+        ) : isYouTube ? (
+          <iframe
+            key={ytId}
+            ref={iframeRef}
+            width="100%"
+            height="100%"
+            src={embedUrl}
+            title="YouTube video player"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            onLoad={handleIframeLoad}
+            className="absolute left-0 top-0 opacity-100 transition-opacity duration-500"
+          />
+        ) : isNativeVideo ? (
+          <video
+            ref={nativeVideoRef}
+            src={videoUrl}
+            controls
+            autoPlay
+            onPlay={handleNativePlay}
+            onPause={handleNativePause}
+            onEnded={handleNativeEnded}
+            className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+          />
+        ) : null}
       </div>
 
       {showTranscript && (
