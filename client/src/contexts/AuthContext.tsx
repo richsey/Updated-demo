@@ -43,10 +43,10 @@ interface AuthContextValue {
     password: string,
     fullName: string,
   ) => Promise<{ error: Error | null; isNewUser?: boolean }>;
-  verifyEmailCode: (
-    email: string,
-    code: string,
-  ) => Promise<{ error: Error | null; isVerified?: boolean }>;
+  // verifyEmailCode: (
+  //   email: string,
+  //   code: string,
+  // ) => Promise<{ error: Error | null; isVerified?: boolean }>;
   signOut: () => Promise<void>;
   updateProfileCache: (updates: Partial<Profile>) => void;
 }
@@ -208,14 +208,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    console.log("[Auth] Attempting custom sign up for:", email);
+    console.log("[Auth] Attempting sign up (no email verification) for:", email);
     
     try {
+      // NOTE: Email verification is temporarily disabled.
+      // Using /api/auth/create-user to directly create the user without a verification step.
       const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
-      const res = await fetch(`${SERVER_URL}/api/auth/register`, {
+      const res = await fetch(`${SERVER_URL}/api/auth/create-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName }),
+        body: JSON.stringify({ email, password, fullName, role: "student" }),
       });
       
       const data = await res.json();
@@ -231,29 +233,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const verifyEmailCode = async (email: string, code: string) => {
-    console.log("[Auth] Attempting code verification for:", email);
-    
-    try {
-      const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
-      const res = await fetch(`${SERVER_URL}/api/auth/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        return { error: new Error(data.error || "Verification failed") };
-      }
-      
-      return { error: null, isVerified: true };
-    } catch (err: any) {
-      console.error("[Auth] Verification error:", err.message);
-      return { error: err };
-    }
-  };
+  // --- EMAIL VERIFICATION (commented out — not in use yet) ---
+  // const verifyEmailCode = async (email: string, code: string) => {
+  //   console.log("[Auth] Attempting code verification for:", email);
+  //   try {
+  //     const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
+  //     const res = await fetch(`${SERVER_URL}/api/auth/verify`, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ email, code }),
+  //     });
+  //     const data = await res.json();
+  //     if (!res.ok) {
+  //       return { error: new Error(data.error || "Verification failed") };
+  //     }
+  //     return { error: null, isVerified: true };
+  //   } catch (err: any) {
+  //     console.error("[Auth] Verification error:", err.message);
+  //     return { error: err };
+  //   }
+  // };
 
   const signOut = async () => {
     try {
@@ -294,7 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profileLoading, 
         signIn, 
         signUp, 
-        verifyEmailCode, 
+        // verifyEmailCode, // commented out — email verification not in use yet
         signOut, 
         updateProfileCache 
       }}
