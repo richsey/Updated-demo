@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCourse } from "@/hooks/useSupabaseQuery";
+import { invalidateCoursesCache } from "@/lib/api/courses";
 import { updateLecturerCourse, deleteMaterial, updateMaterial } from "@/lib/api/lecturer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,8 @@ export default function EditCourse() {
 
   const deleteMaterialMutation = useMutation({
     mutationFn: (materialId: string) => deleteMaterial(materialId),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await invalidateCoursesCache();
       queryClient.invalidateQueries({ queryKey: ["course", courseId] });
       toast({ title: "Material deleted" });
     },
@@ -107,7 +109,8 @@ export default function EditCourse() {
 
   const updateMaterialMutation = useMutation({
     mutationFn: (materialId: string) => updateMaterial(materialId, materialForm),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await invalidateCoursesCache();
       queryClient.invalidateQueries({ queryKey: ["course", courseId] });
       setEditingMaterialId(null);
       toast({ title: "Material updated" });
