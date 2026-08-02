@@ -36,7 +36,19 @@ export async function fetchLecturerCourses(lecturerId: string): Promise<Lecturer
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(`Fetch lecturer courses failed: ${error.message}`);
-  return (data as LecturerCourse[]) ?? [];
+  
+  if (!data || data.length === 0) return [];
+  
+  const { data: allEnrollments } = await supabase.from("enrollments").select("course_id");
+  const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: any) => {
+    acc[curr.course_id] = (acc[curr.course_id] || 0) + 1;
+    return acc;
+  }, {});
+  
+  return (data as LecturerCourse[]).map(c => ({
+    ...c,
+    enrolled_count: enrollmentsMap[c.id] || 0,
+  }));
 }
 
 /** Create a new course (starts in 'draft' status) */
@@ -263,7 +275,19 @@ export async function fetchPendingCourses(): Promise<LecturerCourse[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(`Fetch pending courses failed: ${error.message}`);
-  return (data as LecturerCourse[]) ?? [];
+  
+  if (!data || data.length === 0) return [];
+  
+  const { data: allEnrollments } = await supabase.from("enrollments").select("course_id");
+  const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: any) => {
+    acc[curr.course_id] = (acc[curr.course_id] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (data as LecturerCourse[]).map(c => ({
+    ...c,
+    enrolled_count: enrollmentsMap[c.id] || 0,
+  }));
 }
 
 /** Admin: change a user's role via the backend server (bypasses RLS, updates auth metadata) */

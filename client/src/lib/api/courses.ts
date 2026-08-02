@@ -35,14 +35,25 @@ export async function fetchCourses(useCache = true): Promise<Course[]> {
     const fallback = await supabase.from("courses").select("*").order("created_at", { ascending: true });
     if (fallback.error) throw fallback.error;
     
-    const result = (fallback.data ?? []) as Course[];
-    
-    // Default 0 for fallback
-    result.forEach((c: any) => {
-       c.materials = [];
-       c.enrolled_count = 0;
-    });
-    
+    const { data: allEnrollments } = await supabase.from("enrollments").select("course_id");
+    const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: any) => {
+      acc[curr.course_id] = (acc[curr.course_id] || 0) + 1;
+      return acc;
+    }, {});
+
+    const { data: allMaterials } = await supabase.from("materials").select("course_id, id");
+    const materialsMap = (allMaterials ?? []).reduce((acc: Record<string, any[]>, curr: any) => {
+      if (!acc[curr.course_id]) acc[curr.course_id] = [];
+      acc[curr.course_id].push(curr);
+      return acc;
+    }, {});
+
+    const result = (fallback.data ?? []).map((c: any) => ({
+       ...c,
+       materials: materialsMap[c.id] || [],
+       enrolled_count: enrollmentsMap[c.id] || 0,
+    })) as Course[];
+
     if (result.length > 0) {
       await CacheManager.set(COURSES_CACHE_KEY, result, COURSES_CACHE_TTL);
     }
@@ -104,7 +115,16 @@ export async function fetchCourseById(courseId: string): Promise<Course | null> 
       .eq("course_id", courseId)
       .order("order_index", { ascending: true });
 
-    data = { ...(courseData as Record<string, unknown>), materials: materialsData ?? [], enrollments: [] } as typeof data;
+    const { count: enrolledCount } = await supabase
+      .from("enrollments")
+      .select("*", { count: "exact", head: true })
+      .eq("course_id", courseId);
+
+    data = { 
+      ...(courseData as Record<string, unknown>), 
+      materials: materialsData ?? [], 
+      enrollments: Array.from({ length: enrolledCount ?? 0 }) 
+    } as typeof data;
     error = null;
   }
 
