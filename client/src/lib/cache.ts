@@ -140,19 +140,27 @@ export const CacheManager = {
       const tx = db.transaction([STORE_NAME], "readwrite");
       const store = tx.objectStore(STORE_NAME);
 
-      if (!pattern) {
-        store.clear();
-      } else {
-        const request = store.getAllKeys();
-        request.onsuccess = () => {
-          const keys = request.result;
-          for (const k of keys) {
-            if (typeof k === "string" && k.includes(pattern)) {
-              this.deleteIndexedDB(k);
+      await new Promise<void>((resolve, reject) => {
+        if (!pattern) {
+          const request = store.clear();
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        } else {
+          const request = store.getAllKeys();
+          request.onsuccess = async () => {
+            const keys = request.result;
+            const deletePromises = [];
+            for (const k of keys) {
+              if (typeof k === "string" && k.includes(pattern)) {
+                deletePromises.push(this.deleteIndexedDB(k));
+              }
             }
-          }
-        };
-      }
+            await Promise.all(deletePromises);
+            resolve();
+          };
+          request.onerror = () => reject(request.error);
+        }
+      });
     } catch (err) {
       console.warn("[Cache] IndexedDB clear error:", err);
     }
