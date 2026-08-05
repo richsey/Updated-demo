@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, CheckCircle2, Sparkles, PlayCircle, Code, ArrowRight, BrainCircuit, X, Zap, Clock, TimerOff, Info, ExternalLink, Youtube, Lock, Bookmark } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
+import PdfViewer from "@/components/PdfViewer";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { isBookmarked, addBookmark, removeBookmark } from "@/lib/api/bookmarks";
@@ -229,6 +230,15 @@ export default function LearningMaterial() {
                 onEnded={handleVideoEnded}
                 onStruggle={handleStruggle}
               />
+            )}
+
+            {material.type === "pdf" && (
+              <div className="p-6 flex justify-center w-full bg-background/50">
+                <PdfViewer 
+                  fileUrl={material.url} 
+                  onReadComplete={handleMarkComplete} 
+                />
+              </div>
             )}
 
             {material.type === "tutorial" && (

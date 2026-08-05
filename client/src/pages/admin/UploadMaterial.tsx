@@ -141,7 +141,7 @@ export default function UploadMaterial() {
     const { error } = await supabase.from("materials").insert([{
       course_id: courseId,
       title: title.trim(),
-      type: dbType,
+      type: matType,
       url: finalUrl.trim(),
       duration_minutes: parseInt(duration || "0"),
       order_index: orderIndex + 1,

@@ -35,9 +35,9 @@ const Index = () => {
   const telemetry = useTelemetry({
     endpoint: "/api/telemetry",
     batchIntervalMs: 30_000,
-    idleTimeoutMs: 180_000,
+    idleTimeoutMs: 1200_000,
   });
-
+-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
