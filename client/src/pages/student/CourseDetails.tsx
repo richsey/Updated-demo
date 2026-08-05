@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Star, Users, PlayCircle, Code, ArrowLeft, Lock, CheckCircle2, BookOpen, Loader2, Bookmark } from "lucide-react";
+import { Clock, Star, Users, PlayCircle, Code, ArrowLeft, Lock, CheckCircle2, BookOpen, Loader2, Bookmark, FileText } from "lucide-react";
 import { useCourse, useQuizByCourse, useCourseProgress } from "@/hooks/useSupabaseQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -11,10 +11,18 @@ import { useToast } from "@/hooks/use-toast";
 import { computeCourseProgress, syncCourseProgress } from "@/lib/api/progress";
 import { fetchCourseProgressAPI, fetchCompletedMaterialsAPI } from "@/hooks/useProgressTracking";
 
-const typeIcon = { video: PlayCircle, tutorial: Code };
+const typeIcon = {
+  video: PlayCircle,
+  pdf: FileText,
+  article: FileText,
+  tutorial: Code,
+};
+
 const typeConfig = {
-  video: { bg: "bg-primary/10", border: "border-primary/20", text: "text-primary", label: "Video" },
-  tutorial: { bg: "bg-accent/10", border: "border-accent/20", text: "text-accent", label: "Tutorial" },
+  video: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20", label: "Video Lesson" },
+  pdf: { bg: "bg-rose-500/10", text: "text-rose-500", border: "border-rose-500/20", label: "Document" },
+  article: { bg: "bg-rose-500/10", text: "text-rose-500", border: "border-rose-500/20", label: "Document" },
+  tutorial: { bg: "bg-emerald-500/10", text: "text-emerald-500", border: "border-emerald-500/20", label: "Interactive" },
 };
 
 export default function CourseDetails() {
