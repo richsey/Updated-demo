@@ -232,7 +232,7 @@ export default function LearningMaterial() {
               />
             )}
 
-            {(material.type === "pdf" || material.type === "article") && (
+            {(material.type === "pdf" || material.type === "article" || material.url.toLowerCase().endsWith(".pdf")) && (
               <div className="p-6 flex justify-center w-full bg-background/50">
                 <PdfViewer 
                   fileUrl={material.url} 
@@ -241,7 +241,7 @@ export default function LearningMaterial() {
               </div>
             )}
 
-            {material.type === "tutorial" && (
+            {(material.type === "tutorial" && !material.url.toLowerCase().endsWith(".pdf")) && (
               <div className="flex flex-col items-center justify-center w-full py-28 bg-primary/5 rounded-3xl space-y-8 border border-primary/15 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-5"><Code className="h-64 w-64 rotate-12" /></div>
                 <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-primary/10 border border-primary/20 text-primary shadow-inner"><Code className="h-10 w-10" /></div>
