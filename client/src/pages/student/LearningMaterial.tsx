@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, CheckCircle2, Sparkles, PlayCircle, Code, ArrowRight, BrainCircuit, X, Zap, Clock, TimerOff, Info, ExternalLink, Youtube, Lock, Bookmark } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, Sparkles, PlayCircle, Code, ArrowRight, BrainCircuit, X, Zap, Clock, TimerOff, Info, ExternalLink, Youtube, Lock, Bookmark, FileText } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import PdfViewer from "@/components/PdfViewer";
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -58,6 +58,7 @@ export default function LearningMaterial() {
   const [showVideoAnyway, setShowVideoAnyway] = useState(false);
   const [courseName, setCourseName] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
+  const [showPdf, setShowPdf] = useState(false);
   const [isStruggling, setIsStruggling] = useState(false);
   const [struggleReason, setStruggleReason] = useState("");
   const [simplifiedMaterial, setSimplifiedMaterial] = useState<{
@@ -233,11 +234,27 @@ export default function LearningMaterial() {
             )}
 
             {(material.type === "pdf" || material.type === "article" || material.url.toLowerCase().endsWith(".pdf")) && (
-              <div className="p-6 flex justify-center w-full bg-background/50">
-                <PdfViewer 
-                  fileUrl={material.url} 
-                  onReadComplete={handleMarkComplete} 
-                />
+              <div className="p-6 flex flex-col justify-center items-center w-full bg-background/50">
+                {!showPdf ? (
+                  <div className="flex flex-col items-center justify-center w-full py-28 bg-rose-500/5 rounded-3xl space-y-8 border border-rose-500/15 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5"><FileText className="h-64 w-64 rotate-12 text-rose-500" /></div>
+                    <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-rose-500/10 border border-rose-500/20 text-rose-500 shadow-inner"><FileText className="h-10 w-10" /></div>
+                    <div className="text-center space-y-3 relative z-10">
+                      <h3 className="text-3xl font-extrabold font-display">Document Viewer</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                        Click below to load this document and start reading inline.
+                      </p>
+                    </div>
+                    <Button size="lg" className="bg-rose-500 hover:bg-rose-600 text-white border-0 shadow-lg shadow-rose-500/20 px-12 h-14 rounded-2xl text-base font-bold relative z-10" onClick={() => setShowPdf(true)}>
+                      Launch Document <ArrowRight className="ml-3 h-5 w-5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <PdfViewer 
+                    fileUrl={material.url} 
+                    onReadComplete={handleMarkComplete} 
+                  />
+                )}
               </div>
             )}
 
