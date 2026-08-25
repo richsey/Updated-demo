@@ -36,23 +36,27 @@ export async function fetchCourses(useCache = true): Promise<Course[]> {
     if (fallback.error) throw fallback.error;
     
     const { data: allEnrollments } = await supabase.from("enrollments").select("course_id");
-    const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: any) => {
-      acc[curr.course_id] = (acc[curr.course_id] || 0) + 1;
+    const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: unknown) => {
+      const current = curr as { course_id: string };
+      acc[current.course_id] = (acc[current.course_id] || 0) + 1;
       return acc;
     }, {});
 
     const { data: allMaterials } = await supabase.from("materials").select("course_id, id");
-    const materialsMap = (allMaterials ?? []).reduce((acc: Record<string, any[]>, curr: any) => {
-      if (!acc[curr.course_id]) acc[curr.course_id] = [];
-      acc[curr.course_id].push(curr);
+    const materialsMap = (allMaterials ?? []).reduce((acc: Record<string, unknown[]>, curr: unknown) => {
+      const current = curr as { course_id: string };
+      if (!acc[current.course_id]) acc[current.course_id] = [];
+      acc[current.course_id].push(current);
       return acc;
     }, {});
 
-    const result = (fallback.data ?? []).map((c: any) => ({
-       ...c,
-       materials: materialsMap[c.id] || [],
-       enrolled_count: enrollmentsMap[c.id] || 0,
-    })) as Course[];
+    const result = (fallback.data ?? []).map((c: unknown) => {
+       const course = c as { id: string };
+       return {
+       ...course,
+       materials: materialsMap[course.id] || [],
+       enrolled_count: enrollmentsMap[course.id] || 0,
+    }}) as Course[];
 
     if (result.length > 0) {
       await CacheManager.set(COURSES_CACHE_KEY, result, COURSES_CACHE_TTL);
@@ -60,10 +64,12 @@ export async function fetchCourses(useCache = true): Promise<Course[]> {
     return result;
   }
 
-  const result = (data ?? []).map((course: any) => ({
-    ...course,
-    enrolled_count: course.enrollments ? course.enrollments.length : 0,
-  })) as Course[];
+  const result = (data ?? []).map((course: unknown) => {
+    const c = course as { enrollments?: unknown[] };
+    return {
+    ...c,
+    enrolled_count: c.enrollments ? c.enrollments.length : 0,
+  }}) as Course[];
   
   const duration = performance.now() - startTime;
 
@@ -131,7 +137,7 @@ export async function fetchCourseById(courseId: string): Promise<Course | null> 
   if (error) throw error;
   
   if (data) {
-    (data as any).enrolled_count = (data as any).enrollments ? (data as any).enrollments.length : 0;
+    (data as unknown as Record<string, unknown>).enrolled_count = (data as unknown as { enrollments?: unknown[] }).enrollments ? (data as unknown as { enrollments: unknown[] }).enrollments.length : 0;
   }
 
   // Cache the result

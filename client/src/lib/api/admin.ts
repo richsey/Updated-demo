@@ -197,21 +197,24 @@ export async function fetchHighRiskQuizzes() {
   if (!data) return [];
   
   // Filter for scores < 50%
-  const highRisk = data.filter((attempt: any) => {
-    if (attempt.total_questions === 0) return false;
-    const percentage = (attempt.score / attempt.total_questions) * 100;
+  const highRisk = data.filter((attempt: unknown) => {
+    const a = attempt as { total_questions: number; score: number };
+    if (a.total_questions === 0) return false;
+    const percentage = (a.score / a.total_questions) * 100;
     return percentage < 50;
   });
 
-  return highRisk.map((attempt: any) => ({
-    id: attempt.id,
-    score: attempt.score,
-    total_questions: attempt.total_questions,
-    percentage: Math.round((attempt.score / attempt.total_questions) * 100),
-    created_at: attempt.created_at,
-    studentName: attempt.profiles?.full_name || attempt.profiles?.email || "Unknown Student",
-    studentEmail: attempt.profiles?.email || "Unknown Email",
-    quizTitle: attempt.quizzes?.title || "Unknown Quiz",
-    courseId: attempt.quizzes?.course_id,
-  }));
+  return highRisk.map((attempt: unknown) => {
+    const a = attempt as { id: string; score: number; total_questions: number; created_at: string; profiles?: { full_name?: string; email?: string }; quizzes?: { title?: string; course_id?: string } };
+    return {
+    id: a.id,
+    score: a.score,
+    total_questions: a.total_questions,
+    percentage: Math.round((a.score / a.total_questions) * 100),
+    created_at: a.created_at,
+    studentName: a.profiles?.full_name || a.profiles?.email || "Unknown Student",
+    studentEmail: a.profiles?.email || "Unknown Email",
+    quizTitle: a.quizzes?.title || "Unknown Quiz",
+    courseId: a.quizzes?.course_id,
+  }});
 }

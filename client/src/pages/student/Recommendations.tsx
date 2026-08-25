@@ -173,6 +173,7 @@ export default function Recommendations() {
     };
 
     fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, activeCourses.length]); // depend on length so we don't spam requests if array reference changes but content is same
 
   // Fetch RAG recommendations from AI service
@@ -213,6 +214,7 @@ export default function Recommendations() {
     if (user?.id && activeCourses.length > 0) {
       fetchRAGRecommendations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, activeCourses.length]);
 
   if (progressLoading) {

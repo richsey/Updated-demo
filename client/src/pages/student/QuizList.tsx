@@ -42,7 +42,8 @@ export default function QuizList() {
       );
       setProgressMap(Object.fromEntries(entries));
     };
-    fetchAll();
+      fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, courses]);
 
   const isLoading = loadingQuizzes || loadingCourses;

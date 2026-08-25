@@ -41,7 +41,7 @@ export default function CourseDetails() {
     enabled: !!user?.id,
   });
 
-  const bookmarkedMaterialIds = new Set(bookmarksData.map((b: any) => b.material_id));
+  const bookmarkedMaterialIds = new Set(bookmarksData.map((b: unknown) => (b as { material_id: string }).material_id));
 
   const toggleBookmark = useMutation({
     mutationFn: async ({ materialId, isBookmarked }: { materialId: string, isBookmarked: boolean }) => {

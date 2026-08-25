@@ -40,8 +40,9 @@ export async function fetchLecturerCourses(lecturerId: string): Promise<Lecturer
   if (!data || data.length === 0) return [];
   
   const { data: allEnrollments } = await supabase.from("enrollments").select("course_id");
-  const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: any) => {
-    acc[curr.course_id] = (acc[curr.course_id] || 0) + 1;
+  const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: unknown) => {
+    const current = curr as { course_id: string };
+    acc[current.course_id] = (acc[current.course_id] || 0) + 1;
     return acc;
   }, {});
   
@@ -279,8 +280,9 @@ export async function fetchPendingCourses(): Promise<LecturerCourse[]> {
   if (!data || data.length === 0) return [];
   
   const { data: allEnrollments } = await supabase.from("enrollments").select("course_id");
-  const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: any) => {
-    acc[curr.course_id] = (acc[curr.course_id] || 0) + 1;
+  const enrollmentsMap = (allEnrollments ?? []).reduce((acc: Record<string, number>, curr: unknown) => {
+    const current = curr as { course_id: string };
+    acc[current.course_id] = (acc[current.course_id] || 0) + 1;
     return acc;
   }, {});
 

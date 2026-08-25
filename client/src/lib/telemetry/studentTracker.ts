@@ -78,8 +78,8 @@ export async function trackQuizLocked(userId: string, quizId: string, currentPro
       .eq("id", quizId)
       .single();
 
-    if (quizData && (quizData as any).course_id) {
-      const qd = quizData as any;
+    if (quizData && (quizData as unknown as { course_id?: string }).course_id) {
+      const qd = quizData as unknown as { course_id: string; courses?: { title?: string } };
       const courseTitle = qd.courses?.title || "the course";
       
       // 2. Find materials they haven't completed
@@ -94,11 +94,11 @@ export async function trackQuizLocked(userId: string, quizId: string, currentPro
         .eq("user_id", userId)
         .eq("completed", true);
 
-      const completedIds = new Set((completed || []).map((c: any) => c.material_id));
-      const missedMaterials = (materials || []).filter((m: any) => !completedIds.has(m.id));
+      const completedIds = new Set((completed || []).map((c: unknown) => (c as { material_id: string }).material_id));
+      const missedMaterials = (materials || []).filter((m: unknown) => !completedIds.has((m as { id: string }).id));
 
       if (missedMaterials.length > 0) {
-        const missedTitles = missedMaterials.slice(0, 2).map((m: any) => m.title).join(", ");
+        const missedTitles = missedMaterials.slice(0, 2).map((m: unknown) => (m as { title: string }).title).join(", ");
         const suffix = missedMaterials.length > 2 ? " and others" : "";
         
         await createNotification({

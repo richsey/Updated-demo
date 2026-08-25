@@ -165,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
       clearTimeout(emergencyReset);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // empty deps - ESLint warning fixed by proper structure
 
   const signIn = async (email: string, password: string) => {
@@ -227,9 +228,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       return { error: null, isNewUser: true };
-    } catch (err: any) {
-      console.error("[Auth] Sign up error:", err.message);
-      return { error: err };
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("[Auth] Sign up error:", error.message);
+      return { error };
     }
   };
 

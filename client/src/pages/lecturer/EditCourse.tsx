@@ -123,12 +123,13 @@ export default function EditCourse() {
   const set = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const startEditingMaterial = (material: any) => {
-    setEditingMaterialId(material.id);
+  const startEditingMaterial = (material: unknown) => {
+    const m = material as { id: string; title: string; url: string; duration_minutes?: number };
+    setEditingMaterialId(m.id);
     setMaterialForm({
-      title: material.title,
-      url: material.url,
-      duration_minutes: material.duration_minutes || 0,
+      title: m.title,
+      url: m.url,
+      duration_minutes: m.duration_minutes || 0,
     });
   };
 

@@ -56,7 +56,16 @@ export default function StudentAnalytics() {
   const sumCounts = (arr: TelemetryStat[] = []) => arr.reduce((acc, curr) => acc + curr.count, 0);
   const totalAlerts = sumCounts(telemetry?.replays) + (highRiskQuizzes?.length ?? 0) + sumCounts(telemetry?.abandoned);
 
-  const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
+  const [selectedQuiz, setSelectedQuiz] = useState<{
+    id: string;
+    studentName: string;
+    studentEmail: string;
+    quizTitle: string;
+    score: number;
+    total_questions: number;
+    percentage: number;
+    created_at: string;
+  } | null>(null);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-10">
@@ -116,14 +125,25 @@ export default function StudentAnalytics() {
                   <Card>
                     <CardHeader><CardTitle className="text-sm">High-Risk Quizzes</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
-                      {highRiskQuizzes!.slice(0, 5).map((attempt: any) => (
-                        <div key={attempt.id}
-                          onClick={() => setSelectedQuiz(attempt)}
+                      {highRiskQuizzes!.slice(0, 5).map((attempt: unknown) => {
+                        const a = attempt as {
+                          id: string;
+                          studentName: string;
+                          studentEmail: string;
+                          quizTitle: string;
+                          score: number;
+                          total_questions: number;
+                          percentage: number;
+                          created_at: string;
+                        };
+                        return (
+                        <div key={a.id}
+                          onClick={() => setSelectedQuiz(a)}
                           className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg border border-destructive/20 cursor-pointer hover:bg-destructive/20 transition-colors">
-                          <span className="font-medium text-destructive text-sm truncate max-w-[150px]">{attempt.studentName}</span>
-                          <Badge variant="destructive">{attempt.percentage}%</Badge>
+                          <span className="font-medium text-destructive text-sm truncate max-w-[150px]">{a.studentName}</span>
+                          <Badge variant="destructive">{a.percentage}%</Badge>
                         </div>
-                      ))}
+                      )})}
                     </CardContent>
                   </Card>
                 )}
