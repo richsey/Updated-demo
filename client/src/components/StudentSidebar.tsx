@@ -45,7 +45,7 @@ export function StudentSidebar() {
             </div>
             {!collapsed && (
               <div className="flex flex-col">
-                <span className="text-sm font-bold font-display gradient-text leading-tight">AI Learning</span>
+                <span className="text-sm font-bold font-display gradient-text leading-tight">StudySync</span>
                 <span className="text-[10px] text-muted-foreground leading-tight">Student Portal</span>
               </div>
             )}

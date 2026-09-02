@@ -48,7 +48,7 @@ const Index = () => {
               <Brain className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-lg font-bold text-foreground tracking-tight">
-              AI Learning Guide
+              StudySync
             </span>
           </div>
           <Badge variant="outline" className="gap-1.5 font-mono text-xs">

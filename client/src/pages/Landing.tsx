@@ -73,7 +73,7 @@ export default function Landing() {
               />
             </div>
             <span className="text-lg font-bold font-display gradient-text">
-              AI Learning Guide
+              StudySync
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
@@ -125,7 +125,7 @@ export default function Landing() {
           </h1>
 
           <p className="mx-auto max-w-2xl text-xl text-muted-foreground leading-relaxed">
-            AI Learning Guide detects when recommendations fail and corrects
+            StudySync detects when recommendations fail and corrects
             them automatically. Get personalized study paths based on your{" "}
             <span className="text-foreground font-medium">real engagement</span>
             , not vanity metrics.
@@ -171,7 +171,7 @@ export default function Landing() {
         <div className="container">
           <div className="text-center mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-sm text-accent font-medium">
-              <Sparkles className="h-3.5 w-3.5" /> Why AI Learning Guide?
+              <Sparkles className="h-3.5 w-3.5" /> Why StudySync?
             </div>
             <h2 className="text-4xl font-bold font-display">
               Everything you need to{" "}
@@ -265,10 +265,10 @@ export default function Landing() {
               <Brain className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="font-display font-semibold text-foreground">
-              AI Learning Guide
+              StudySync
             </span>
           </div>
-          <span>© 2026 AI Learning Guide. All rights reserved.</span>
+          <span>© 2026 StudySync. All rights reserved.</span>
         </div>
       </footer>
     </div>
