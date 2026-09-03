@@ -565,50 +565,152 @@ def _analyze_user(user_id: str, user_data: Dict[str, Any]) -> UserAnalysis:
 
 # ── FAISS Retrieval ────────────────────────────────────────────────────────────
 
+# Difficulty adjacency for level-matching scoring
+_LEVEL_DIFFICULTY_MAP: Dict[str, List[str]] = {
+    "beginner":     ["beginner", "intermediate"],
+    "intermediate": ["intermediate", "beginner", "advanced"],
+    "advanced":     ["advanced", "intermediate"],
+}
+
+
+def _compute_hybrid_score(
+    material: "MaterialRecord",
+    base_similarity: float,
+    user_level: str,
+    weak_topics: List[str],
+) -> float:
+    """
+    Compute a hybrid relevance score for a candidate material by blending:
+      - base_similarity : cosine similarity score from FAISS (0-1)
+      - difficulty match : +0.3 for exact level match, +0.1 for adjacent level
+      - keyword overlap  : +0.2 for each weak topic whose words appear in the
+                           material title or course category (capped at one
+                           keyword hit per topic to avoid over-boosting)
+
+    This logic was previously buried in the fallback path; by promoting it
+    to the primary retrieval step the LLM always sees the best-ranked slate.
+    """
+    score = base_similarity
+    preferred = _LEVEL_DIFFICULTY_MAP.get(user_level, ["beginner", "intermediate"])
+
+    diff = material.course_difficulty
+    if diff == preferred[0]:
+        score += 0.3
+    elif len(preferred) > 1 and diff == preferred[1]:
+        score += 0.1
+
+    combined = (material.title + " " + material.course_category).lower()
+    for topic in weak_topics:
+        for word in topic.lower().split():
+            if len(word) > 3 and word in combined:
+                score += 0.2
+                break  # only one keyword hit per topic
+
+    return score
+
+
 def _retrieve_materials(
     analysis: UserAnalysis,
     top_k: int = TOP_K_RETRIEVAL,
 ) -> List[Dict[str, Any]]:
     """
-    Build a retrieval query from weak topics, search FAISS, and return
-    the top-k uncompleted materials ranked by cosine similarity.
+    Multi-Query + Hybrid retrieval:
+
+    1. Build one query string per weak topic (instead of concatenating all
+       topics into a single query).
+    2. Run a FAISS search for each query, collecting top_k*3 results.
+    3. Merge across all per-topic result sets using Max Pooling — a material
+       keeps the highest cosine score it achieved across any query.  This
+       means a material only needs to be strongly relevant to *one* topic
+       to surface, rather than being a mediocre match to all topics at once.
+    4. Apply _compute_hybrid_score (difficulty + keyword boosts) to every
+       deduplicated candidate so the metadata signal reaches Gemini, not
+       just the fallback path.
+    5. Filter completed materials, sort by hybrid_score descending, return
+       the top-k candidates.
+
+    Edge cases handled:
+      - Zero weak topics   → single general query.
+      - Single weak topic  → loop runs once; behaviour identical to v1 but
+                             with hybrid scoring on top.
+      - All candidates completed → returns [] (caller handles gracefully).
+      - FAISS index not built   → returns [] immediately.
     """
     if not _faiss_index.is_ready:
         logger.warning("FAISS index not ready — skipping retrieval")
         return []
 
-    logger.info("[AI] Retrieving materials...")
+    logger.info("[AI] Retrieving materials (Multi-Query + Hybrid)...")
 
-    query = (
-        "Learning resources for: " + ", ".join(analysis.weak_topics)
-        if analysis.weak_topics
-        else "general learning material for continued skill development"
+    # ── Step 1: build per-topic queries ──────────────────────────────────────
+    if analysis.weak_topics:
+        queries = [
+            f"Learning resources for: {topic}"
+            for topic in analysis.weak_topics
+        ]
+    else:
+        queries = ["general learning material for continued skill development"]
+
+    logger.info(
+        f"Multi-query: {len(queries)} topic queries | "
+        f"topics={analysis.weak_topics[:5]}"
     )
-    logger.info(f"Retrieval query: '{query[:120]}'")
 
-    # Fetch more candidates than needed so we can filter out completed ones
-    raw = _faiss_index.search(query, top_k=top_k * 3)
+    # ── Step 2 & 3: per-topic FAISS search + Max Pooling ─────────────────────
+    # candidate_map: material_id → { material, max_similarity_score }
+    candidate_map: Dict[str, Dict] = {}
 
-    candidates: List[Dict[str, Any]] = []
-    for material, score in raw:
-        if material.id in analysis.completed_material_ids:
-            continue  # Skip already-completed materials
-        candidates.append(
+    for query in queries:
+        logger.debug(f"FAISS query: '{query[:100]}'")
+        raw = _faiss_index.search(query, top_k=top_k * 3)
+        for material, score in raw:
+            if material.id in analysis.completed_material_ids:
+                continue
+            existing = candidate_map.get(material.id)
+            if existing is None or score > existing["max_score"]:
+                candidate_map[material.id] = {
+                    "material": material,
+                    "max_score": score,
+                }
+
+    logger.info(
+        f"Max Pooling: {len(candidate_map)} unique uncompleted candidates "
+        f"from {len(queries)} query/queries"
+    )
+
+    # ── Step 4: Apply hybrid metadata scoring ────────────────────────────────
+    scored: List[Dict[str, Any]] = []
+    for entry in candidate_map.values():
+        mat: "MaterialRecord" = entry["material"]
+        hybrid = _compute_hybrid_score(
+            mat,
+            entry["max_score"],
+            analysis.user_level,
+            analysis.weak_topics,
+        )
+        scored.append(
             {
-                "material_id": material.id,
-                "title": material.title,
-                "type": material.type,
-                "duration_minutes": material.duration_minutes,
-                "course_title": material.course_title,
-                "course_category": material.course_category,
-                "course_difficulty": material.course_difficulty,
-                "similarity_score": round(score, 4),
+                "material_id": mat.id,
+                "title": mat.title,
+                "type": mat.type,
+                "duration_minutes": mat.duration_minutes,
+                "course_title": mat.course_title,
+                "course_category": mat.course_category,
+                "course_difficulty": mat.course_difficulty,
+                # Expose both scores for debugging / metadata logging
+                "similarity_score": round(entry["max_score"], 4),
+                "hybrid_score": round(hybrid, 4),
             }
         )
-        if len(candidates) >= top_k:
-            break
 
-    logger.info(f"Retrieved {len(candidates)} candidate materials")
+    # ── Step 5: Sort by hybrid score and return top-k ─────────────────────────
+    scored.sort(key=lambda c: c["hybrid_score"], reverse=True)
+    candidates = scored[:top_k]
+
+    logger.info(
+        f"Retrieved {len(candidates)} candidates "
+        f"(top hybrid_score={candidates[0]['hybrid_score'] if candidates else 'n/a'})"
+    )
     return candidates
 
 
@@ -806,43 +908,19 @@ def _generate_fallback(
     analysis: UserAnalysis, candidates: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    Fallback when Ollama is unavailable.
-    Ranks candidates by:
-      1. Whether they cover weak topic keywords (highest priority)
-      2. Course difficulty matching user level
-      3. Similarity score from FAISS
-    Returns structured recommendations.
+    Fallback when Gemini is unavailable.
+
+    Candidates are already optimally ordered by `hybrid_score` from the
+    Multi-Query + Hybrid retrieval step, so this function only needs to
+    map them to the required output format (title, reason, difficulty,
+    priority, links).  The internal `_rank_score` sort that previously
+    lived here has been promoted to the primary retrieval path as
+    `_compute_hybrid_score`.
     """
     logger.info(
-        "[AI] Ollama unavailable — using rule-based fallback "
-        "(ranked by quiz weakness + difficulty match)"
+        "[AI] Gemini unavailable — using rule-based fallback "
+        "(candidates already ranked by hybrid_score)"
     )
-
-    level_difficulty_map = {
-        "beginner": ["beginner", "intermediate"],
-        "intermediate": ["intermediate", "beginner", "advanced"],
-        "advanced": ["advanced", "intermediate"],
-    }
-    preferred_difficulties = level_difficulty_map.get(
-        analysis.user_level, ["beginner", "intermediate"]
-    )
-
-    def _rank_score(c: Dict[str, Any]) -> float:
-        score = c.get("similarity_score", 0.0)
-        # Boost if difficulty matches user level
-        diff = c.get("course_difficulty", "beginner")
-        if diff == preferred_difficulties[0]:
-            score += 0.3
-        elif len(preferred_difficulties) > 1 and diff == preferred_difficulties[1]:
-            score += 0.1
-        # Boost if title/category overlaps with weak topics
-        combined = (c.get("title", "") + " " + c.get("course_category", "")).lower()
-        for topic in analysis.weak_topics:
-            for word in topic.lower().split():
-                if len(word) > 3 and word in combined:
-                    score += 0.2
-                    break
-        return score
 
     # Multi-source URL generators based on course category
     def _make_links(title: str, category: str) -> List[Dict[str, str]]:
@@ -919,7 +997,8 @@ def _generate_fallback(
                 {"url": f"https://www.khanacademy.org/search?page_search_query={query_plus}", "source": "khan_academy", "label": "Khan Academy"},
             ]
 
-    ranked = sorted(candidates, key=_rank_score, reverse=True)[:MAX_RECOMMENDATIONS]
+    # Candidates already sorted by hybrid_score from _retrieve_materials; just slice.
+    ranked = candidates[:MAX_RECOMMENDATIONS]
 
     recs = []
     for i, c in enumerate(ranked):
