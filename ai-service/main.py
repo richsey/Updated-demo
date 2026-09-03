@@ -14,10 +14,17 @@ load_dotenv(dotenv_path=str(Path(__file__).resolve().parent / ".env"))
 
 app = FastAPI()
 
-# Allow frontend (Vite dev server) to call the AI service directly
+# Explicit origins required — browsers reject allow_origins=["*"] when
+# allow_credentials=True is set (CORS spec disallows the combination).
+origins = [
+    "https://updated-demo.vercel.app",  # Production (Vercel)
+    "http://localhost:5173",             # Vite dev server
+    "http://localhost:3000",             # Alt local port
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
