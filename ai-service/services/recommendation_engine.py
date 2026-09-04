@@ -648,6 +648,11 @@ def _retrieve_materials(
             f"Learning resources for: {topic}"
             for topic in analysis.weak_topics
         ]
+    elif analysis.strong_topics:
+        queries = [
+            f"Advanced learning resources for: {topic}"
+            for topic in analysis.strong_topics
+        ]
     else:
         queries = ["general learning material for continued skill development"]
 
