@@ -1,14 +1,16 @@
-fastapi
-uvicorn
-supabase
-python-dotenv
+fastapi>=0.115.0
+uvicorn>=0.34.0
+supabase>=2.0.0
+python-dotenv>=1.2.2
 faiss-cpu
 numpy
-requests
+requests>=2.33.0
 google-genai
 scikit-learn
 openai
 ollama
+slowapi>=0.1.9
+starlette>=1.3.1
 # sentence-transformers requires PyTorch (Python <= 3.12).
 # On Python 3.14+, the system automatically falls back to scikit-learn TF-IDF.
 # Install manually if your environment supports it:

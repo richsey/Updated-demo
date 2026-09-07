@@ -7,7 +7,8 @@ import { fetchProgressRecommendation } from "../services/progressAIService.js";
  */
 export const markMaterialComplete = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body.userId;
+    // Always derive userId from the validated JWT — never trust the request body.
+    const userId = req.user?.id;
     const { materialId } = req.body;
 
     if (!userId || !materialId) {
@@ -122,7 +123,8 @@ export const markMaterialComplete = async (req, res) => {
  */
 export const getCourseProgress = async (req, res) => {
   try {
-    const userId = req.query.userId || req.user?.id;
+    // Always derive userId from the validated JWT — never trust query params.
+    const userId = req.user?.id;
     const { courseId } = req.params;
 
     if (!userId || !courseId) {
@@ -156,7 +158,8 @@ export const getCourseProgress = async (req, res) => {
  */
 export const getMaterialCompletionStatus = async (req, res) => {
   try {
-    const userId = req.query.userId || req.user?.id;
+    // Always derive userId from the validated JWT — never trust query params.
+    const userId = req.user?.id;
     const { courseId } = req.query;
 
     if (!userId || !courseId) {

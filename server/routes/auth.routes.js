@@ -15,13 +15,41 @@ const supabaseAdmin = createClient(
 );
 
 /**
+ * Middleware: verify caller is an authenticated admin.
+ * Reads the Bearer token from Authorization header, validates it with
+ * Supabase, and checks app_metadata.role === "admin".
+ */
+const requireAdmin = async (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token required" });
+  }
+  try {
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !data?.user) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+    const role = data.user.app_metadata?.role;
+    if (role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    req.callerUser = data.user;
+    next();
+  } catch (err) {
+    console.error("[Auth Route] requireAdmin error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
  * POST /api/auth/set-role
- * Body: { userId: string, role: "admin" | "student" }
+ * Body: { userId: string, email: string }
  *
  * Sets app_metadata.role for the user via the admin API.
  * Only sets "admin" if the user's email contains "admin" — prevents privilege escalation.
+ * REQUIRES: Admin JWT in Authorization header.
  */
-router.post("/set-role", async (req, res) => {
+router.post("/set-role", requireAdmin, async (req, res) => {
   try {
     const { userId, email } = req.body;
 
@@ -48,6 +76,7 @@ router.post("/set-role", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 /**
  * POST /api/auth/create-user
@@ -82,7 +111,9 @@ router.post("/create-user", async (req, res) => {
     }
 
     const userId = data.user.id;
-    const assignedRole = role || "student";
+    // Always create users as 'student' regardless of client-supplied role.
+    // An admin must explicitly promote the user via /change-role afterward.
+    const assignedRole = "student";
 
     const { error: roleError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       app_metadata: { role: assignedRole },
@@ -115,8 +146,9 @@ router.post("/create-user", async (req, res) => {
  *
  * Admin-only: changes an existing user's role in both auth.users (app_metadata)
  * and the profiles table using the service-role key (bypasses RLS).
+ * REQUIRES: Admin JWT in Authorization header.
  */
-router.post("/change-role", async (req, res) => {
+router.post("/change-role", requireAdmin, async (req, res) => {
   try {
     const { userId, newRole } = req.body;
 
@@ -162,7 +194,7 @@ router.post("/change-role", async (req, res) => {
  * DELETE /api/auth/delete-user
  * Body: { userId }
  */
-router.delete("/delete-user", async (req, res) => {
+router.delete("/delete-user", requireAdmin, async (req, res) => {
   try {
     const { userId } = req.body;
 

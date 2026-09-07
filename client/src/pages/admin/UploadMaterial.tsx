@@ -87,8 +87,35 @@ export default function UploadMaterial() {
     // 1. Upload file if needed
     if (uploadMethod === "file" && selectedFile) {
       setUploading(true);
-      const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+
+      // ─── Client-side validation (server-side Supabase policy should also enforce) ──
+      const MAX_FILE_SIZE_MB = 50;
+      const ALLOWED_TYPES: Record<string, string[]> = {
+        video:   ["video/mp4", "video/webm", "video/ogg", "video/quicktime"],
+        pdf:     ["application/pdf"],
+        article: ["application/pdf", "text/plain", "text/markdown", "application/msword",
+                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+        tutorial: ["application/pdf", "text/plain", "text/html"],
+      };
+
+      if (selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        toast.error(`File exceeds the ${MAX_FILE_SIZE_MB} MB size limit.`);
+        setUploading(false);
+        setSaving(false);
+        return;
+      }
+
+      const allowedMimes = ALLOWED_TYPES[matType] ?? [];
+      if (allowedMimes.length > 0 && !allowedMimes.includes(selectedFile.type)) {
+        toast.error(`Invalid file type "${selectedFile.type}" for material type "${matType}".`);
+        setUploading(false);
+        setSaving(false);
+        return;
+      }
+
+      // Always use a server-generated filename — never trust the client-supplied name
+      const fileExt = selectedFile.name.split(".").pop()?.toLowerCase() ?? "bin";
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${courseId}/${fileName}`;
 
       // Upload file to 'materials' bucket

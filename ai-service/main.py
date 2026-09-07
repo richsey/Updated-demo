@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from supabase import create_client
 import os
 import json
@@ -12,8 +14,61 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=str(Path(__file__).resolve().parent / ".env"))
 
-app = FastAPI()
+# ─── Rate Limiting Setup ──────────────────────────────────────────────────────
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
 
+    limiter = Limiter(key_func=get_remote_address)
+    RATE_LIMITING_ENABLED = True
+except ImportError:
+    limiter = None
+    RATE_LIMITING_ENABLED = False
+    print("[Security] WARNING: slowapi not installed — rate limiting disabled. Run: pip install slowapi")
+
+# ─── App Initialization ───────────────────────────────────────────────────────
+
+app = FastAPI(
+    debug=False,  # Ensure stack traces are never returned in production
+    docs_url=None,  # Disable Swagger/OpenAPI UI in production
+    redoc_url=None,
+)
+
+if RATE_LIMITING_ENABLED:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ─── Security Headers Middleware ──────────────────────────────────────────────
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to every response."""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; frame-ancestors 'none'"
+        )
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# ─── Global Exception Handler ─────────────────────────────────────────────────
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Never leak internal error details or stack traces to the client in production."""
+    print(f"[AI Service] Unhandled exception: {type(exc).__name__}: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"error": "An internal error occurred. Please try again later."},
+    )
+
+# ─── CORS Middleware ──────────────────────────────────────────────────────────
 # Explicit origins required — browsers reject allow_origins=["*"] when
 # allow_credentials=True is set (CORS spec disallows the combination).
 origins = [
@@ -44,9 +99,19 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 from services.gemini_service import generate_with_gemini, get_gemini_status
 
+
+def _rate_limit(limit: str):
+    """Return a rate-limit decorator if slowapi is installed, else a no-op."""
+    if RATE_LIMITING_ENABLED:
+        return limiter.limit(limit)
+    def noop(func):
+        return func
+    return noop
+
+
 @app.get("/")
 def home():
-    return {"message": "AI Service Connected to Supabase 🚀"}
+    return {"message": "AI Service Connected to Supabase"}
 
 
 # ─── Gemini Status ────────────────────────────────────────────────────────────
@@ -97,7 +162,7 @@ def classify_level(progress: float) -> str:
 def get_level_message(level: str, progress: float) -> str:
     """Generate a motivational message based on level."""
     messages = {
-        "beginner": f"You're just getting started ({progress:.0f}%)! Keep going — every lesson counts.",
+        "beginner": f"You're just getting started ({progress:.0f}%)! Keep going - every lesson counts.",
         "intermediate": f"Great progress at {progress:.0f}%! You're building solid understanding.",
         "advanced": f"Almost there at {progress:.0f}%! You're mastering this course.",
     }
@@ -112,10 +177,8 @@ async def recommend_progress(payload: ProgressRecommendRequest):
     level = classify_level(payload.progress)
     message = get_level_message(level, payload.progress)
 
-    # Find uncompleted materials for this course
     recommended_next_material = None
     try:
-        # Get all materials for the course
         materials_resp = (
             supabase.table("materials")
             .select("id, title, type, duration_minutes")
@@ -125,7 +188,6 @@ async def recommend_progress(payload: ProgressRecommendRequest):
         )
         all_materials = materials_resp.data or []
 
-        # Get user's completed material IDs for this course
         completed_resp = (
             supabase.table("user_material_progress")
             .select("material_id")
@@ -135,7 +197,6 @@ async def recommend_progress(payload: ProgressRecommendRequest):
         )
         completed_ids = {r["material_id"] for r in (completed_resp.data or [])}
 
-        # Find first uncompleted material
         for mat in all_materials:
             if mat["id"] not in completed_ids:
                 recommended_next_material = {
@@ -165,12 +226,11 @@ class RAGRequest(BaseModel):
 
 
 @app.post("/recommend/rag")
-async def recommend_rag(payload: RAGRequest):
+@_rate_limit("10/minute")
+async def recommend_rag(request: Request, payload: RAGRequest):
     """
     RAG-powered recommendation endpoint.
-    Uses sentence-transformers + FAISS retrieval + Ollama/LLM
-    to produce personalized, context-aware material recommendations.
-
+    Rate limited: 10 requests/minute per IP.
     Input:  { "user_id": "uuid" }
     Output: { "recommendations": [...], "metadata": {...} }
     """
@@ -191,11 +251,11 @@ async def recommend_rag(payload: RAGRequest):
 
 
 @app.post("/recommend/rag/rebuild")
-async def rebuild_rag_index():
+@_rate_limit("2/minute")
+async def rebuild_rag_index(request: Request):
     """
     Admin endpoint to force-rebuild the embedding index.
-    Call this after adding/updating course materials.
-
+    Rate limited: 2 requests/minute per IP.
     Input:  (none)
     Output: { "status": "rebuilt", "material_count": N, "built_at": timestamp }
     """
@@ -214,20 +274,19 @@ class QuizGenerateRequest(BaseModel):
     difficulty: str = "intermediate"  # beginner | intermediate | advanced
 
 
-# Curated fallback questions per category (used when no OpenAI key)
 _FALLBACK_QUESTIONS = {
     "Frontend": [
         {"text": "What is the virtual DOM in React?", "options": ["A direct copy of the real DOM", "A lightweight in-memory representation of the real DOM", "A CSS framework", "A database layer"], "correct_index": 1, "explanation": "The virtual DOM is a lightweight JavaScript representation of the real DOM that React uses to efficiently determine what needs to update."},
         {"text": "Which hook is used to manage side effects in React?", "options": ["useState", "useEffect", "useRef", "useMemo"], "correct_index": 1, "explanation": "useEffect is the React hook designed for handling side effects like fetching data, subscriptions, and DOM manipulation."},
-        {"text": "What does JSX stand for?", "options": ["JavaScript XML", "JavaScript Extension", "Java Syntax Extension", "JSON XML Schema"], "correct_index": 0, "explanation": "JSX stands for JavaScript XML — it allows writing HTML-like syntax in JavaScript files."},
+        {"text": "What does JSX stand for?", "options": ["JavaScript XML", "JavaScript Extension", "Java Syntax Extension", "JSON XML Schema"], "correct_index": 0, "explanation": "JSX stands for JavaScript XML - it allows writing HTML-like syntax in JavaScript files."},
         {"text": "Which method is used to update state in a functional component?", "options": ["this.setState()", "useState() setter function", "setState()", "updateState()"], "correct_index": 1, "explanation": "In functional components, the setter function returned by useState() is used to update state."},
         {"text": "What is the purpose of React.memo()?", "options": ["To memorize user inputs", "To prevent unnecessary re-renders by memoizing component output", "To store data in memory", "To create memos in the app"], "correct_index": 1, "explanation": "React.memo() is a higher-order component that memoizes a component's output to skip re-renders when props haven't changed."},
     ],
     "Styling": [
         {"text": "What does the 'flex' property do in CSS?", "options": ["Makes an element invisible", "Enables flexible box layout", "Adds a border", "Changes font size"], "correct_index": 1, "explanation": "display: flex enables the Flexible Box Layout model, allowing items to be aligned and distributed within a container."},
-        {"text": "Which CSS property controls the space between grid items?", "options": ["margin", "gap", "padding", "spacing"], "correct_index": 1, "explanation": "The gap property (formerly grid-gap) sets the spacing between rows and columns in a grid or flex container."},
-        {"text": "In Tailwind CSS, what does 'p-4' mean?", "options": ["Padding of 4rem", "Padding of 1rem (16px)", "Padding of 4px", "Position 4"], "correct_index": 1, "explanation": "In Tailwind, p-4 applies padding of 1rem (16px) on all sides. Each unit is 0.25rem."},
-        {"text": "What is the CSS box model order from inside out?", "options": ["Margin, border, padding, content", "Content, padding, border, margin", "Padding, content, margin, border", "Content, margin, padding, border"], "correct_index": 1, "explanation": "The CSS box model goes: content (innermost), then padding, then border, then margin (outermost)."},
+        {"text": "Which CSS property controls the space between grid items?", "options": ["margin", "gap", "padding", "spacing"], "correct_index": 1, "explanation": "The gap property sets the spacing between rows and columns in a grid or flex container."},
+        {"text": "In Tailwind CSS, what does 'p-4' mean?", "options": ["Padding of 4rem", "Padding of 1rem (16px)", "Padding of 4px", "Position 4"], "correct_index": 1, "explanation": "In Tailwind, p-4 applies padding of 1rem (16px) on all sides."},
+        {"text": "What is the CSS box model order from inside out?", "options": ["Margin, border, padding, content", "Content, padding, border, margin", "Padding, content, margin, border", "Content, margin, padding, border"], "correct_index": 1, "explanation": "The CSS box model goes: content, then padding, then border, then margin."},
         {"text": "What does 'position: sticky' do?", "options": ["Fixes element forever", "Toggles between relative and fixed based on scroll position", "Makes element invisible", "Removes element from flow"], "correct_index": 1, "explanation": "position: sticky makes an element act as relative until it reaches a scroll threshold, then it becomes fixed."},
     ],
     "Languages": [
@@ -235,17 +294,17 @@ _FALLBACK_QUESTIONS = {
         {"text": "What does the 'interface' keyword do in TypeScript?", "options": ["Creates a class", "Defines a contract for object shapes", "Imports a module", "Declares a variable"], "correct_index": 1, "explanation": "An interface in TypeScript defines a contract specifying what properties and methods an object should have."},
         {"text": "What is a union type in TypeScript?", "options": ["A type that combines two arrays", "A type that can be one of several types", "A special number type", "A CSS type"], "correct_index": 1, "explanation": "A union type (using |) allows a value to be one of several types, e.g., string | number."},
         {"text": "What does 'readonly' modifier do in TypeScript?", "options": ["Makes a property optional", "Prevents a property from being modified after creation", "Makes a property private", "Adds validation"], "correct_index": 1, "explanation": "The readonly modifier prevents a property from being reassigned after the object is created."},
-        {"text": "What is a generic type in TypeScript?", "options": ["A type that works with any data type", "A type for numbers only", "A CSS class", "A React component"], "correct_index": 0, "explanation": "Generics allow creating reusable components that work with multiple types while maintaining type safety, e.g., Array<T>."},
+        {"text": "What is a generic type in TypeScript?", "options": ["A type that works with any data type", "A type for numbers only", "A CSS class", "A React component"], "correct_index": 0, "explanation": "Generics allow creating reusable components that work with multiple types while maintaining type safety."},
     ],
     "Backend": [
         {"text": "What is middleware in Express.js?", "options": ["A database layer", "Functions that execute during the request-response cycle", "A CSS framework", "A frontend library"], "correct_index": 1, "explanation": "Middleware functions have access to the request and response objects and can modify them or end the cycle."},
         {"text": "What HTTP method is typically used to create a new resource?", "options": ["GET", "POST", "PUT", "DELETE"], "correct_index": 1, "explanation": "POST is the standard HTTP method for creating new resources on a server."},
         {"text": "What does CORS stand for?", "options": ["Cross-Origin Resource Sharing", "Create Origin Resource System", "Client Object Request Service", "Central Origin Response Server"], "correct_index": 0, "explanation": "CORS (Cross-Origin Resource Sharing) is a security mechanism that allows or restricts resource requests from different origins."},
-        {"text": "What is the purpose of environment variables?", "options": ["To style the app", "To store configuration outside the codebase", "To create animations", "To format code"], "correct_index": 1, "explanation": "Environment variables store sensitive configuration (API keys, DB URLs) outside the code, keeping them secure."},
+        {"text": "What is the purpose of environment variables?", "options": ["To style the app", "To store configuration outside the codebase", "To create animations", "To format code"], "correct_index": 1, "explanation": "Environment variables store sensitive configuration outside the code, keeping them secure."},
         {"text": "What status code indicates a successful POST request that created a resource?", "options": ["200", "201", "404", "500"], "correct_index": 1, "explanation": "HTTP 201 (Created) indicates that a request was successful and a new resource was created as a result."},
     ],
     "General": [
-        {"text": "What does API stand for?", "options": ["Application Programming Interface", "Advanced Program Integration", "Automated Processing Input", "Application Process Integration"], "correct_index": 0, "explanation": "API stands for Application Programming Interface — a set of rules for building and interacting with software."},
+        {"text": "What does API stand for?", "options": ["Application Programming Interface", "Advanced Program Integration", "Automated Processing Input", "Application Process Integration"], "correct_index": 0, "explanation": "API stands for Application Programming Interface - a set of rules for building and interacting with software."},
         {"text": "What is the difference between let and const in JavaScript?", "options": ["No difference", "let can be reassigned, const cannot", "const is faster", "let is deprecated"], "correct_index": 1, "explanation": "let declares a reassignable variable while const declares a constant that cannot be reassigned after initialization."},
         {"text": "What is a Promise in JavaScript?", "options": ["A guarantee of performance", "An object representing the eventual completion of an async operation", "A type of loop", "A CSS property"], "correct_index": 1, "explanation": "A Promise represents an asynchronous operation that will eventually resolve with a value or reject with an error."},
         {"text": "What does JSON stand for?", "options": ["JavaScript Object Notation", "Java Standard Object Network", "JavaScript Online Notation", "Java Serialized Object Network"], "correct_index": 0, "explanation": "JSON (JavaScript Object Notation) is a lightweight data interchange format used for structured data."},
@@ -255,12 +314,11 @@ _FALLBACK_QUESTIONS = {
 
 
 @app.post("/quiz/generate")
-async def generate_quiz(payload: QuizGenerateRequest):
+@_rate_limit("5/minute")
+async def generate_quiz(request: Request, payload: QuizGenerateRequest):
     """
     AI-Powered Quiz Generator.
-    Generates practice quiz questions based on course materials using GPT-4o-mini.
-    Falls back to curated questions if no OpenAI key is available.
-
+    Rate limited: 5 requests/minute per IP (Gemini calls can be costly).
     Input:  { "course_id": "uuid", "num_questions": 5, "difficulty": "intermediate" }
     Output: { "questions": [...], "metadata": {...} }
     """
@@ -271,7 +329,6 @@ async def generate_quiz(payload: QuizGenerateRequest):
         "num_questions": payload.num_questions,
     }
 
-    # 1. Fetch course + materials info from Supabase
     try:
         course_resp = (
             supabase.table("courses")
@@ -296,7 +353,6 @@ async def generate_quiz(payload: QuizGenerateRequest):
     metadata["course_title"] = course["title"]
     metadata["course_category"] = course.get("category", "General")
 
-    # Fetch material titles for context
     try:
         mat_resp = (
             supabase.table("materials")
@@ -312,7 +368,6 @@ async def generate_quiz(payload: QuizGenerateRequest):
     material_list = ", ".join(m["title"] for m in materials) if materials else "general course content"
     metadata["material_count"] = len(materials)
 
-    # Build the shared quiz prompt (used by both Ollama and Gemini)
     quiz_prompt = f"""Generate exactly {payload.num_questions} multiple-choice quiz questions for a {payload.difficulty}-level student.
 
 Course: {course['title']}
@@ -325,9 +380,6 @@ RULES:
 - Include a clear explanation for the correct answer
 - Questions should test understanding, not just memorization
 - Difficulty level: {payload.difficulty}
-  * beginner: basic concepts and definitions
-  * intermediate: application and understanding
-  * advanced: analysis, edge cases, and best practices
 
 You MUST respond with ONLY valid JSON in this exact format:
 {{
@@ -342,7 +394,6 @@ You MUST respond with ONLY valid JSON in this exact format:
 }}"""
 
     questions = None
-    # 2. Try Google Gemini first
     try:
         raw = generate_with_gemini(
             prompt=quiz_prompt,
@@ -362,16 +413,13 @@ You MUST respond with ONLY valid JSON in this exact format:
         print(f"[QuizGen] Gemini error: {e}")
         questions = None
 
-    # 3. Fallback to curated questions
     if not questions:
         category = course.get("category", "General")
         pool = _FALLBACK_QUESTIONS.get(category, _FALLBACK_QUESTIONS["General"])
-        # Shuffle and pick requested number
         shuffled = random.sample(pool, min(payload.num_questions, len(pool)))
         questions = shuffled
         metadata["generation_method"] = "curated_fallback"
 
-    # 4. Ensure correct format with order_index
     for i, q in enumerate(questions):
         q["order_index"] = i
 

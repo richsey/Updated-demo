@@ -13,8 +13,73 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// ─── Security Headers ──────────────────────────────────────────────────────
+// Apply helmet if available; adds X-Content-Type-Options, X-Frame-Options,
+// X-XSS-Protection, Referrer-Policy, HSTS, etc.
+try {
+  const { default: helmet } = await import("helmet");
+  app.use(helmet());
+} catch {
+  // helmet not installed — add minimal headers manually
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    next();
+  });
+}
+
+// ─── Rate Limiting ────────────────────────────────────────────────────────
+let rateLimit;
+try {
+  const rl = await import("express-rate-limit");
+  rateLimit = rl.default || rl.rateLimit;
+} catch {
+  // express-rate-limit not installed — no-op
+  rateLimit = null;
+}
+
+if (rateLimit) {
+  // General API: 100 requests / 15 minutes per IP
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests. Please try again later." },
+  });
+  app.use("/api", generalLimiter);
+
+  // Auth routes: stricter — 10 requests / 15 minutes per IP
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many auth requests. Please wait before trying again." },
+  });
+  app.use("/api/auth", authLimiter);
+}
+
+// ─── CORS ─────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  "https://updated-demo.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
+}));
+
+app.use(express.json({ limit: "1mb" }));
 
 app.use("/api/progress", progressRoutes);
 app.use("/api/quiz-attempts", quizRoutes);

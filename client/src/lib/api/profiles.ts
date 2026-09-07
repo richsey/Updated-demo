@@ -146,7 +146,8 @@ export async function updateProfile(
 
     if (updates.email !== undefined) updatePayload.email = updates.email;
     if (updates.full_name !== undefined) updatePayload.full_name = updates.full_name;
-    if (updates.role !== undefined) updatePayload.role = updates.role;
+    // NOTE: 'role' is intentionally excluded — role changes must go through
+    // the admin /api/auth/change-role endpoint with proper authorization.
     if (updates.avatar_url !== undefined) updatePayload.avatar_url = updates.avatar_url;
     if (updates.bio !== undefined) updatePayload.bio = updates.bio;
     if (updates.phone !== undefined) updatePayload.phone = updates.phone;
