@@ -51,7 +51,7 @@ export default function StudentLayout() {
       }}
     >
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-secondary">
+        <div className="min-h-screen flex w-full overflow-hidden bg-secondary">
           <StudentSidebar />
           <div className="flex-1 flex flex-col min-w-0">
             <header className="h-14 flex items-center justify-between border-b border-border bg-background px-4 shadow-sm">

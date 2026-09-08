@@ -1,4 +1,7 @@
-import { LayoutDashboard, BookOpen, GraduationCap, ClipboardList, Sparkles, Brain, FileStack, Zap, User, Bell, Bookmark, Award, Megaphone } from "lucide-react";
+import {
+  LayoutDashboard, BookOpen, GraduationCap, ClipboardList,
+  Sparkles, Brain, FileStack, Zap, User, Bell, Bookmark, Award, Megaphone,
+} from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -20,24 +23,22 @@ import {
 
 const coreItems = [
   { title: "Dashboard",       url: "/dashboard",       icon: LayoutDashboard },
-  { title: "Courses",         url: "/courses",         icon: BookOpen         },
-  { title: "Quizzes",         url: "/quizzes",         icon: ClipboardList    },
-  { title: "Practice Quiz",   url: "/practice",        icon: Zap              },
-  { title: "Past Questions",  url: "/past-questions",  icon: FileStack        },
-  { title: "Recommendations", url: "/recommendations", icon: Sparkles         },
-  { title: "My Progress",     url: "/progress",        icon: GraduationCap    },
+  { title: "Courses",         url: "/courses",         icon: BookOpen        },
+  { title: "Quizzes",         url: "/quizzes",         icon: ClipboardList   },
+  { title: "Practice Quiz",   url: "/practice",        icon: Zap             },
+  { title: "Past Questions",  url: "/past-questions",  icon: FileStack       },
+  { title: "Recommendations", url: "/recommendations", icon: Sparkles        },
+  { title: "My Progress",     url: "/progress",        icon: GraduationCap   },
 ];
 
 const personalItems = [
-  { title: "Profile",         url: "/profile",         icon: User             },
-  { title: "Notifications",   url: "/notifications",   icon: Bell             },
-  { title: "Bookmarks",       url: "/bookmarks",       icon: Bookmark         },
-  { title: "Certificates",    url: "/certificates",    icon: Award            },
-  { title: "Announcements",   url: "/announcements",   icon: Megaphone        },
+  { title: "Profile",       url: "/profile",       icon: User     },
+  { title: "Notifications", url: "/notifications", icon: Bell     },
+  { title: "Bookmarks",     url: "/bookmarks",     icon: Bookmark },
+  { title: "Certificates",  url: "/certificates",  icon: Award    },
+  { title: "Announcements", url: "/announcements", icon: Megaphone},
 ];
 
-/** Renders a nav item. When the sidebar is collapsed (icon-only), wraps in a
- *  Tooltip so the label appears on hover to the right of the icon. */
 function SidebarNavItem({
   item,
   collapsed,
@@ -48,7 +49,12 @@ function SidebarNavItem({
   const link = (
     <NavLink
       to={item.url}
-      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-all duration-150 group"
+      className={[
+        "flex items-center rounded-xl py-2.5 transition-all duration-150 group",
+        "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+        // Collapsed: centre the single icon; expanded: normal left-aligned row
+        collapsed ? "justify-center px-0 w-full" : "gap-3 px-3",
+      ].join(" ")}
       activeClassName="bg-primary/15 text-primary font-semibold border border-primary/20 hover:bg-primary/20 hover:text-primary"
     >
       <item.icon className="h-4 w-4 flex-shrink-0 group-hover:scale-110 transition-transform duration-150" />
@@ -56,7 +62,6 @@ function SidebarNavItem({
     </NavLink>
   );
 
-  // No tooltip needed when the label is already visible
   if (!collapsed) return link;
 
   return (
@@ -79,14 +84,22 @@ export function StudentSidebar() {
         <SidebarContent>
           <SidebarGroup>
             {/* Logo */}
-            <div className={`flex items-center gap-3 px-3 py-4 mb-2 ${collapsed ? "justify-center" : ""}`}>
+            <div
+              className={`flex items-center py-4 mb-2 ${
+                collapsed ? "justify-center px-2" : "gap-3 px-3"
+              }`}
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary glow-sm flex-shrink-0">
                 <Brain className="h-4 w-4 text-white" />
               </div>
               {!collapsed && (
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold font-display gradient-text leading-tight">StudySync</span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">Student Portal</span>
+                  <span className="text-sm font-bold font-display gradient-text leading-tight">
+                    StudySync
+                  </span>
+                  <span className="text-[10px] text-muted-foreground leading-tight">
+                    Student Portal
+                  </span>
                 </div>
               )}
             </div>
@@ -98,7 +111,7 @@ export function StudentSidebar() {
               <SidebarMenu>
                 {coreItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={item.title}>
                       <SidebarNavItem item={item} collapsed={collapsed} />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -119,7 +132,7 @@ export function StudentSidebar() {
               <SidebarMenu>
                 {personalItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={item.title}>
                       <SidebarNavItem item={item} collapsed={collapsed} />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
