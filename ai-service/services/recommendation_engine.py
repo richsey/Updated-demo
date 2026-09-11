@@ -385,6 +385,7 @@ def _load_user_data(supabase: Client, user_id: str) -> Dict[str, Any]:
                     supabase.table(table)
                     .select("course_id, progress")
                     .eq("user_id", user_id)
+                    .gt("progress", 0)
                     .execute()
                 )
                 rows = resp.data or []
@@ -702,7 +703,6 @@ def _retrieve_materials(
                 "course_title": mat.course_title,
                 "course_category": mat.course_category,
                 "course_difficulty": mat.course_difficulty,
-                # Expose both scores for debugging / metadata logging
                 "similarity_score": round(entry["max_score"], 4),
                 "hybrid_score": round(hybrid, 4),
             }
@@ -722,63 +722,25 @@ def _retrieve_materials(
 # ── Prompt Builder ─────────────────────────────────────────────────────────────
 
 def _build_prompt(
-    analysis: UserAnalysis,
-    candidates: List[Dict[str, Any]],
+    topic_name: str,
+    course_id: str,
 ) -> str:
     """
-    Construct a detailed prompt for Ollama Gemma that includes:
-      - Student level
-      - Quiz performance stats
-      - Weak and strong topics
-      - Completed material count
-      - Retrieved (FAISS) candidate materials
+    Construct a highly focused prompt for external resources.
     """
-    topics_text = "\n".join(
-        f"  {i+1}. \"{c['title']}\" "
-        f"(Course: \"{c['course_title']}\", "
-        f"Category: {c['course_category']}, "
-        f"Difficulty: {c['course_difficulty']}, "
-        f"Type: {c['type']}, "
-        f"Duration: {c['duration_minutes']}min)"
-        for i, c in enumerate(candidates)
-    )
-    weak_str = (
-        ", ".join(analysis.weak_topics[:5])
-        if analysis.weak_topics
-        else "None identified — recommend for general growth"
-    )
-    strong_str = (
-        ", ".join(analysis.strong_topics[:5])
-        if analysis.strong_topics
-        else "None identified yet"
-    )
-
-    return f"""You are an AI learning advisor for an adaptive learning platform.
-Analyze the student's learning data and recommend external resources to help them improve.
-
-STUDENT PROFILE:
-- Level: {analysis.user_level}
-- Average quiz score: {analysis.avg_quiz_score}%
-- Materials completed: {analysis.completed_material_count} / {analysis.total_material_count} ({analysis.completion_pct}%)
-- Weak areas (low quiz scores < 60%): {weak_str}
-- Strong areas (high quiz scores > 80%): {strong_str}
-
-CANDIDATE MATERIALS (from their enrolled courses):
-{topics_text if topics_text else "  (No materials retrieved — recommend general improvement)"}
+    return f"""You are an expert technical tutor. The user has explicitly requested external learning resources for the topic/course: {topic_name}. Generate {MAX_RECOMMENDATIONS} high-quality, external beginner-friendly resources (videos, tutorials, official docs) strictly limited to this specific selection. Do not generate generic beginner recommendations.
 
 INSTRUCTIONS:
-- Select the {MAX_RECOMMENDATIONS} most valuable topics from the candidate list above.
-- For each topic, find 2-3 DIFFERENT external resources from DIFFERENT platforms.
-- Prioritize topics that address the student's weak areas and match their level.
+- Generate exactly {MAX_RECOMMENDATIONS} recommendations.
 - For each recommendation provide:
   * title: descriptive title for this topic (e.g. "Understanding Photosynthesis")
-  * reason: 1-2 sentence personalized explanation referencing their weak areas or level
-  * difficulty: beginner | intermediate | advanced (match student level: {analysis.user_level})
+  * reason: 1-2 sentence explanation of why this resource is useful for {topic_name}
+  * difficulty: beginner
   * priority: integer 1-{MAX_RECOMMENDATIONS} (1 = most important)
   * links: array of 2-3 objects, each with:
       - url: a REAL working URL to an external resource
       - source: platform name (youtube | documentation | freecodecamp | khan_academy | wikipedia | coursera | investopedia | other)
-      - label: short descriptive label for the link (e.g. "YouTube Tutorial", "Khan Academy", "Wikipedia Overview")
+      - label: short descriptive label for the link
 
 URL GUIDELINES by subject category:
 - Math/Statistics/Calculus:
@@ -1065,25 +1027,9 @@ class RecommendationEngine:
 
     # ── Main RAG pipeline ──
 
-    def get_rag_recommendations(self, user_id: str) -> Dict[str, Any]:
+    def get_rag_recommendations(self, user_id: str, topic_name: str, course_id: str) -> Dict[str, Any]:
         """
-        Full RAG pipeline:
-          1. Ensure FAISS index is built (lazy init)
-          2. Load user data from Supabase
-          3. Analyse weak/strong topics and user level
-          4. Retrieve top-5 relevant materials via FAISS
-          5. Build detailed prompt
-          6. Call Ollama Gemma → parse JSON → fallback if needed
-          7. Return structured response
-
-        Returns
-        -------
-        {
-          "recommendations": [
-            { "title": str, "reason": str, "difficulty": str, "priority": int }
-          ],
-          "metadata": { ... }
-        }
+        On-demand RAG pipeline for specific topic/course.
         """
         if not user_id or not user_id.strip():
             return {
@@ -1092,76 +1038,19 @@ class RecommendationEngine:
             }
 
         t_start = time.time()
-        metadata: Dict[str, Any] = {"user_id": user_id, "pipeline": "rag"}
+        metadata: Dict[str, Any] = {"user_id": user_id, "pipeline": "rag", "topic_name": topic_name, "course_id": course_id}
 
-        # ── Step 1: Lazy-build FAISS index ──
-        if not _faiss_index.is_ready:
-            logger.info("[AI] Loading embeddings...")
-            build_result = build_index(self.supabase)
-            metadata["embedding_build"] = build_result
-
-            if not _faiss_index.is_ready:
-                elapsed = time.time() - t_start
-                return {
-                    "recommendations": [],
-                    "metadata": {
-                        **metadata,
-                        "elapsed_seconds": round(elapsed, 3),
-                        "error": (
-                            "No materials found in database — "
-                            "FAISS index could not be built."
-                        ),
-                    },
-                }
-
-        # ── Step 2: Load user data ──
-        user_data = _load_user_data(self.supabase, user_id)
-        metadata["data_loaded"] = {
-            "courses": len(user_data.get("course_progress", [])),
-            "materials": len(user_data.get("material_progress", [])),
-            "quizzes": len(user_data.get("quiz_attempts", [])),
-            "telemetry": len(user_data.get("telemetry", [])),
-        }
-
-        # ── Step 3: Analyse user ──
-        analysis = _analyze_user(user_id, user_data)
-        metadata["user_level"] = analysis.user_level
-        metadata["weak_topics"] = analysis.weak_topics
-        metadata["strong_topics"] = analysis.strong_topics
-        metadata["avg_quiz_score"] = analysis.avg_quiz_score
-        metadata["completion_pct"] = analysis.completion_pct
-
-        # ── Step 4: Retrieve materials via FAISS ──
-        logger.info("[AI] Retrieving materials...")
-        candidates = _retrieve_materials(analysis)
-        metadata["candidates_retrieved"] = len(candidates)
-
-        if not candidates:
-            elapsed = time.time() - t_start
-            return {
-                "recommendations": [],
-                "metadata": {
-                    **metadata,
-                    "elapsed_seconds": round(elapsed, 3),
-                    "message": (
-                        "No uncompleted materials found. "
-                        "You may have completed all available content!"
-                    ),
-                },
-            }
-
-        # ── Step 5 + 6: Build prompt → call Gemini → fallback ──
-        prompt = _build_prompt(analysis, candidates)
+        # Build prompt → call Gemini
+        prompt = _build_prompt(topic_name, course_id)
         result = _generate_with_gemini(prompt)
 
         if result is not None:
             metadata["generation_method"] = "llm_gemini"
         else:
-            # Fallback: rule-based ranking using lowest quiz scores + incomplete materials
-            result = _generate_fallback(analysis, candidates)
+            # Fallback
+            result = {"recommendations": []}
             metadata["generation_method"] = "rule_based_fallback"
 
-        # ── Step 7: Finalise response ──
         elapsed = time.time() - t_start
         metadata["elapsed_seconds"] = round(elapsed, 3)
 

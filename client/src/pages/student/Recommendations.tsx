@@ -142,6 +142,9 @@ export default function Recommendations() {
     (p) => (p.progress ?? 0) > 0 || (p.completed_materials ?? 0) > 0
   );
 
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [topicName, setTopicName] = useState<string>("");
+
   // Fetch progress-based AI data for each active course
   useEffect(() => {
     if (!user?.id || activeCourses.length === 0) {
@@ -178,7 +181,7 @@ export default function Recommendations() {
 
   // Fetch RAG recommendations from AI service
   const fetchRAGRecommendations = async () => {
-    if (!user?.id || activeCourses.length === 0) return;
+    if (!user?.id || !selectedCourseId || !topicName) return;
 
     setRagLoading(true);
     setRagError(null);
@@ -187,7 +190,11 @@ export default function Recommendations() {
       const response = await fetch(`${AI_SERVICE_URL}/recommend/rag`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.id }),
+        body: JSON.stringify({
+          user_id: user.id,
+          topicName: topicName,
+          courseId: selectedCourseId,
+        }),
       });
 
       if (!response.ok) {
@@ -208,14 +215,6 @@ export default function Recommendations() {
       setRagLoading(false);
     }
   };
-
-  // Auto-fetch RAG recommendations when active courses > 0
-  useEffect(() => {
-    if (user?.id && activeCourses.length > 0) {
-      fetchRAGRecommendations();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, activeCourses.length]);
 
   if (progressLoading) {
     return (
@@ -312,15 +311,37 @@ export default function Recommendations() {
               )}
             </div>
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
               onClick={fetchRAGRecommendations}
-              disabled={ragLoading}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              disabled={ragLoading || !selectedCourseId || !topicName}
+              className="text-xs"
             >
               <RefreshCw className={`h-3.5 w-3.5 mr-1 ${ragLoading ? "animate-spin" : ""}`} />
-              Refresh
+              Generate Recommendations
             </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
+            >
+              <option value="" disabled>Select a course...</option>
+              {activeCourses.map((c) => (
+                <option key={c.course_id} value={c.course_id}>
+                  {c.courses?.title}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="e.g. Hooks, Context, Forms"
+              value={topicName}
+              onChange={(e) => setTopicName(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
           </div>
 
           <p className="text-xs text-muted-foreground">

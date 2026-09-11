@@ -75,6 +75,7 @@ origins = [
     "https://updated-demo.vercel.app",  # Production (Vercel)
     "http://localhost:5173",             # Vite dev server
     "http://localhost:3000",             # Alt local port
+    "http://localhost:8080",             # Alt local port used by preview environment
 ]
 
 app.add_middleware(
@@ -223,6 +224,8 @@ async def recommend_progress(payload: ProgressRecommendRequest):
 
 class RAGRequest(BaseModel):
     user_id: str
+    topicName: str
+    courseId: str
 
 
 @app.post("/recommend/rag")
@@ -231,12 +234,12 @@ async def recommend_rag(request: Request, payload: RAGRequest):
     """
     RAG-powered recommendation endpoint.
     Rate limited: 10 requests/minute per IP.
-    Input:  { "user_id": "uuid" }
+    Input:  { "user_id": "uuid", "topicName": "...", "courseId": "..." }
     Output: { "recommendations": [...], "metadata": {...} }
     """
     try:
         engine = RecommendationEngine(supabase)
-        result = engine.get_rag_recommendations(payload.user_id)
+        result = engine.get_rag_recommendations(payload.user_id, payload.topicName, payload.courseId)
         return result
     except Exception as e:
         return {
