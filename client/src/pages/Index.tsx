@@ -31,9 +31,11 @@ const SAMPLE_RECOMMENDATIONS = [
   },
 ];
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
+
 const Index = () => {
   const telemetry = useTelemetry({
-    endpoint: "/api/telemetry",
+    endpoint: `${SERVER_URL}/api/telemetry`,
     batchIntervalMs: 30_000,
     idleTimeoutMs: 1200_000,
   });

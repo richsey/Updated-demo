@@ -9,11 +9,13 @@ import { ActiveTimeContext } from "@/contexts/ActiveTimeContext";
 import { User, LogOut, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
+
 export default function StudentLayout() {
   const { signOut, profile } = useAuth();
   const navigate = useNavigate();
   const { prefetch } = usePrefetchCriticalData();
-  const telemetry = useTelemetry({ endpoint: "/api/telemetry" });
+  const telemetry = useTelemetry({ endpoint: `${SERVER_URL}/api/telemetry` });
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
