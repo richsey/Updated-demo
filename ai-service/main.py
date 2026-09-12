@@ -73,6 +73,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # allow_credentials=True is set (CORS spec disallows the combination).
 origins = [
     "https://updated-demo.vercel.app",  # Production (Vercel)
+    "https://updated-studysync.vercel.app", # Production (Vercel)
     "http://localhost:5173",             # Vite dev server
     "http://localhost:3000",             # Alt local port
     "http://localhost:8080",             # Alt local port used by preview environment
