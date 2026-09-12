@@ -58,7 +58,7 @@ VALUES
 
   -- Advanced Patterns
   ('b0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000003', 'Compound Components', 'tutorial', 'https://react.dev/learn/passing-data-deeply-with-context#before-we-start', 30, 1),
-  ('b0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000003', 'Performance Optimization', 'video', 'https://www.youtube.com/watch?v=AQVIdewoqHQ', 35, 2),
+  ('b0000000-0000-0000-0000-000000000007', 'a0000000-0000-0000-0000-000000000003', 'Performance Optimization', 'video', 'https://www.youtube.com/watch?v=keTcXT145CI', 35, 2),
 
   -- TypeScript
   ('b0000000-0000-0000-0000-000000000008', 'a0000000-0000-0000-0000-000000000004', 'TypeScript Basics', 'video', 'https://www.youtube.com/watch?v=zQnBQ4tB3ZA', 20, 1),
