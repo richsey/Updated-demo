@@ -58,7 +58,8 @@ export default function UploadMaterial() {
     if (uploadMethod === "url" && (url.includes("youtube.com") || url.includes("youtu.be"))) {
       const fetchDuration = async () => {
         try {
-          const res = await fetch(`http://localhost:5001/api/metadata/youtube-duration?url=${encodeURIComponent(url)}`);
+          const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5001";
+          const res = await fetch(`${SERVER_URL}/api/metadata/youtube-duration?url=${encodeURIComponent(url)}`);
           if (res.ok) {
             const data = await res.json();
             if (data.durationMinutes) {
