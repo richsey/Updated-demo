@@ -1,4 +1,8 @@
 {
   "postman.settings.dotenv-detection-notification-visibility": false,
-  "css.lint.unknownAtRules": "ignore"
+  "css.lint.unknownAtRules": "ignore",
+  "python.defaultInterpreterPath": "${workspaceFolder}/ai-service/venv/bin/python",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/ai-service"
+  ]
 }
