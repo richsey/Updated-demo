@@ -1,4 +1,8 @@
 {
+  "env": {
+    "VITE_SERVER_URL": "https://updated-demo-production.up.railway.app",
+    "VITE_AI_SERVICE_URL": "https://ai-service-production-641d.up.railway.app"
+  },
   "rewrites": [
     {
       "source": "/(.*)",
