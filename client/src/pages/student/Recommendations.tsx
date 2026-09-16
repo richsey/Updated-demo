@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { fetchCourseProgressAPI } from "@/hooks/useProgressTracking";
+import { ExternalViewer } from "@/components/ExternalViewer";
+import { useExternalViewer } from "@/hooks/useExternalViewer";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -92,7 +94,13 @@ function DifficultyBadge({ level }: { level: string }) {
   );
 }
 
-function SourceBadge({ link }: { link: RecommendationLink }) {
+function SourceBadge({
+  link,
+  onOpen,
+}: {
+  link: RecommendationLink;
+  onOpen: (url: string, title: string, triggerEl: HTMLElement | null) => void;
+}) {
   const colorMap: Record<string, string> = {
     youtube: "text-destructive bg-destructive/10 border-destructive/20 hover:bg-destructive/20",
     documentation: "text-info bg-info/10 border-info/20 hover:bg-info/20",
@@ -106,17 +114,18 @@ function SourceBadge({ link }: { link: RecommendationLink }) {
   };
   const color = colorMap[link.source?.toLowerCase()] ?? colorMap.other;
   return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${color}`}
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen(link.url, link.label, e.currentTarget as HTMLElement);
+      }}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${color}`}
     >
       <SourceIcon source={link.source} />
       {link.label}
       <ExternalLink className="h-2.5 w-2.5 opacity-60" />
-    </a>
+    </button>
   );
 }
 
@@ -137,6 +146,15 @@ export default function Recommendations() {
   const [ragData, setRagData] = useState<RAGResponse | null>(null);
   const [ragLoading, setRagLoading] = useState(false);
   const [ragError, setRagError] = useState<string | null>(null);
+
+  // ─── ExternalViewer state ───────────────────────────────────────────────────
+  const { open: openViewer, viewerProps } = useExternalViewer();
+
+  const handleOpenLink = (
+    url: string,
+    title: string,
+    triggerEl: HTMLElement | null
+  ) => openViewer({ url, title }, triggerEl);
 
   const activeCourses = progressData.filter(
     (p) => (p.progress ?? 0) > 0 || (p.completed_materials ?? 0) > 0
@@ -252,6 +270,7 @@ export default function Recommendations() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold font-display">Recommendations</h1>
@@ -410,7 +429,7 @@ export default function Recommendations() {
                       <div className="flex items-center gap-2 flex-wrap pl-1">
                         <span className="text-[10px] text-muted-foreground mr-1">Learn from:</span>
                         {links.map((link, li) => (
-                          <SourceBadge key={li} link={link} />
+                          <SourceBadge key={li} link={link} onOpen={handleOpenLink} />
                         ))}
                       </div>
                     </div>
@@ -460,5 +479,9 @@ export default function Recommendations() {
         </CardContent>
       </Card>
     </div>
+
+    {/* ExternalViewer modal — full-screen overlay */}
+    <ExternalViewer {...viewerProps} />
+    </>
   );
 }

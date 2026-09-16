@@ -100,6 +100,7 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 from services.gemini_service import generate_with_gemini, get_gemini_status
+from services.embeddability import check_embeddability
 
 
 def _rate_limit(limit: str):
@@ -116,7 +117,41 @@ def home():
     return {"message": "AI Service Connected to Supabase"}
 
 
-# ─── Gemini Status ────────────────────────────────────────────────────────────
+# ─── Embeddability Checker ────────────────────────────────────────────────────
+
+@app.get("/api/links/embeddable")
+@_rate_limit("30/minute")
+async def check_link_embeddable(request: Request, url: str):
+    """
+    Check whether an external URL can safely be loaded inside an iframe.
+
+    Query param:
+        url (str): The external URL to probe.
+
+    Response:
+        {
+            "url":        str,   -- the queried URL (normalised)
+            "host":       str,   -- extracted hostname
+            "embeddable": bool,  -- True if iframe should work
+            "reason":     str,   -- human-readable explanation
+            "checked_at": str,   -- ISO-8601 UTC timestamp
+            "from_cache": bool   -- present and True when served from cache
+        }
+
+    Security:
+        - Only http/https URLs accepted.
+        - Hostname is DNS-resolved; private/loopback/link-local IPs rejected.
+        - Follows at most 3 redirects; hard timeout of 8 seconds.
+        - Results cached per-host in Supabase `link_embed_cache`.
+    """
+    if not url or not url.strip():
+        return JSONResponse(
+            status_code=422,
+            content={"error": "url query parameter is required"},
+        )
+    result = check_embeddability(url.strip(), supabase_client=supabase)
+    return result
+
 
 @app.get("/gemini/status")
 async def gemini_status():

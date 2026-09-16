@@ -28,6 +28,7 @@ interface RAGRecommendationCardProps {
   priority: number;
   url?: string;
   source?: string;
+  onOpen?: (url: string, title: string, triggerEl: HTMLElement | null) => void;
 }
 
 /**
@@ -73,7 +74,7 @@ function DifficultyBadge({ level }: { level: string }) {
 // ─── RAG Card ────────────────────────────────────────────────────────────────
 
 function RAGCard(props: RAGRecommendationCardProps) {
-  const { title, reason, difficulty, priority, url, source } = props;
+  const { title, reason, difficulty, priority, url, source, onOpen } = props;
 
   const cardContent = (
     <Card className="group relative overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5 transition-all hover:border-violet-500/40 hover:shadow-md hover:shadow-violet-500/10">
@@ -118,8 +119,22 @@ function RAGCard(props: RAGRecommendationCardProps) {
   );
 
   if (url) {
+    if (onOpen) {
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(url, title, e.currentTarget as HTMLElement);
+          }}
+          className="block w-full text-left cursor-pointer"
+        >
+          {cardContent}
+        </button>
+      );
+    }
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
         {cardContent}
       </a>
     );

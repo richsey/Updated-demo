@@ -11,6 +11,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+import ExternalViewerDemo from "./pages/ExternalViewerDemo";
 
 // Layouts
 import StudentLayout from "./layouts/StudentLayout";
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/demo/external-viewer" element={<ExternalViewerDemo />} />
 
             {/* Student — requires login */}
             <Route element={<ProtectedRoute requiredRole="student" />}>

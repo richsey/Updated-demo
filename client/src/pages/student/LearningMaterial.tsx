@@ -19,6 +19,8 @@ import { useMaterial, useQuizByCourse, useCourseProgress } from "@/hooks/useSupa
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useProgressTracking } from "@/hooks/useProgressTracking";
+import { ExternalViewer } from "@/components/ExternalViewer";
+import { useExternalViewer } from "@/hooks/useExternalViewer";
 
 export default function LearningMaterial() {
   const { materialId } = useParams();
@@ -74,6 +76,9 @@ export default function LearningMaterial() {
   const [externalSearchUrl, setExternalSearchUrl] = useState("");
 
   const { markComplete, isMarking, aiRecommendation } = useProgressTracking();
+
+  // ─── ExternalViewer state ───────────────────────────────────────────────────
+  const { open: openViewer, viewerProps } = useExternalViewer();
 
   const startTimeRef = useRef(Date.now());
   const hasClickedPdfRef = useRef(false);
@@ -161,6 +166,7 @@ export default function LearningMaterial() {
     : 0;
 
   return (
+    <>
     <div className="space-y-6 max-w-5xl mx-auto pb-10 relative">
       <Link to={`/courses/${material.course_id}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group">
         <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition-transform" /> Back to {courseName || "Course"}
@@ -210,8 +216,18 @@ export default function LearningMaterial() {
                   </div>
                   
                   <div className="flex flex-col gap-4 pt-4">
-                    <Button asChild size="lg" className="w-full h-14 rounded-2xl text-base font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 hover:scale-[1.02] active:scale-95 transition-all">
-                      <a href={externalSearchUrl} target="_blank" rel="noopener noreferrer" onClick={() => setIsStruggling(false)}>Yes, show me a similar video</a>
+                    <Button
+                      size="lg"
+                      className="w-full h-14 rounded-2xl text-base font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 hover:scale-[1.02] active:scale-95 transition-all"
+                      onClick={(e) => {
+                        setIsStruggling(false);
+                        openViewer(
+                          { url: externalSearchUrl, title: `Similar video: ${material?.title ?? ""}` },
+                          e.currentTarget as HTMLElement
+                        );
+                      }}
+                    >
+                      Yes, show me a similar video
                     </Button>
                     
                     <Button variant="outline" size="lg" className="w-full h-14 rounded-2xl text-base font-bold text-muted-foreground hover:text-foreground" onClick={() => setIsStruggling(false)}>
@@ -263,7 +279,19 @@ export default function LearningMaterial() {
                 <div className="absolute top-0 right-0 p-8 opacity-5"><Code className="h-64 w-64 rotate-12" /></div>
                 <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-primary/10 border border-primary/20 text-primary shadow-inner"><Code className="h-10 w-10" /></div>
                 <div className="text-center space-y-3 relative z-10"><h3 className="text-3xl font-extrabold font-display">Interactive Tutorial</h3><p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">Engagement is tracked automatically once you launch the external environment.</p></div>
-                <Button asChild size="lg" className="gradient-primary border-0 glow-sm px-12 h-14 rounded-2xl text-base font-bold relative z-10" onClick={() => { if (materialId && user) { handleMarkComplete(); } }}><a href={material.url} target="_blank" rel="noopener noreferrer">Launch Material <ArrowRight className="ml-3 h-5 w-5" /></a></Button>
+                <Button
+                  size="lg"
+                  className="gradient-primary border-0 glow-sm px-12 h-14 rounded-2xl text-base font-bold relative z-10"
+                  onClick={(e) => {
+                    if (materialId && user) handleMarkComplete();
+                    openViewer(
+                      { url: material.url, title: material.title },
+                      e.currentTarget as HTMLElement
+                    );
+                  }}
+                >
+                  Launch Material <ArrowRight className="ml-3 h-5 w-5" />
+                </Button>
               </div>
             )}
           </CardContent>
@@ -274,7 +302,7 @@ export default function LearningMaterial() {
         <div className="md:col-span-2 space-y-6">
           <div className="flex items-center gap-2"><Info className="h-5 w-5 text-primary" /><h3 className="text-xl font-bold font-display">Lesson Context</h3></div>
           <div className="prose prose-slate dark:prose-invert max-w-none text-muted-foreground leading-loose bg-card/40 p-8 rounded-3xl border border-border/40">
-            <p>This masterclass lesson on <strong>{material.title}</strong> is designed to build foundational mastery. We recommend active listening and following along with any code snippets described.</p>
+            <p>This masterclass {material.type === "tutorial" ? "interactive" : material.type} lesson on <strong>{material.title}</strong> is designed to build foundational mastery. We recommend active engagement and following along with any concepts described.</p>
           </div>
         </div>
         
@@ -330,5 +358,9 @@ export default function LearningMaterial() {
         </div>
       </div>
     </div>
+
+    {/* ExternalViewer modal — full-screen overlay */}
+    <ExternalViewer {...viewerProps} />
+    </>
   );
 }
