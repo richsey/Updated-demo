@@ -30,9 +30,9 @@ const SCENARIOS = [
   {
     id: "loaded",
     label: "Embeddable site",
-    description: "react.dev allows framing. The iframe loads and the page is visible.",
-    url: "https://react.dev/",
-    title: "React — The library for web and native user interfaces",
+    description: "Wikipedia allows framing. The iframe loads and the page is fully visible inside the viewer.",
+    url: "https://en.wikipedia.org/wiki/Main_Page",
+    title: "Wikipedia — The Free Encyclopedia",
     embeddable: true,
     stateTag: "loaded" as const,
     icon: CheckCircle2,
@@ -228,6 +228,7 @@ export default function ExternalViewerDemo() {
                 </code>{" "}
                 on the FastAPI AI service. Inspects X-Frame-Options and CSP
                 frame-ancestors headers. Results are cached per host in Supabase.
+                Sites like Wikipedia allow framing; sites like YouTube do not.
               </p>
             </div>
             <div className="space-y-1.5">

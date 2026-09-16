@@ -37,6 +37,8 @@ import {
   X,
   ShieldX,
   RefreshCw,
+  AlertTriangle,
+  ArrowUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -105,52 +107,89 @@ function BlockedFallback({
   url,
   title,
   reason,
+  onRetry,
 }: {
   url: string;
   title?: string;
   reason: string;
+  onRetry?: () => void;
 }) {
   const host = extractHost(url);
   const favicon = faviconUrl(url);
 
+  const isCspBlock = reason.toLowerCase().includes("csp") ||
+    reason.toLowerCase().includes("frame-options") ||
+    reason.toLowerCase().includes("x-frame");
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-lg rounded-3xl border border-border/60 bg-card/80 p-10 text-center shadow-2xl backdrop-blur-sm">
-        {/* Icon cluster */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive relative">
-          <ShieldX className="h-9 w-9" />
-          {favicon && (
-            <img
-              src={favicon}
-              alt=""
-              aria-hidden="true"
-              className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full border-2 border-background bg-background object-contain shadow"
-              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-            />
-          )}
+    <div className="absolute inset-0 flex items-center justify-center bg-background/95 p-6 backdrop-blur-sm">
+      <div className="w-full max-w-lg space-y-6">
+        {/* Main card */}
+        <div className="rounded-3xl border border-destructive/20 bg-card/90 p-10 text-center shadow-2xl shadow-destructive/5">
+          {/* Icon cluster */}
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive relative">
+            <ShieldX className="h-9 w-9" />
+            {favicon && (
+              <img
+                src={favicon}
+                alt=""
+                aria-hidden="true"
+                className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full border-2 border-background bg-background object-contain shadow"
+                onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+              />
+            )}
+          </div>
+
+          {/* Text */}
+          <h2 className="mb-1 text-xl font-bold font-display">
+            {title || host}
+          </h2>
+          <p className="mb-1 text-sm font-medium text-muted-foreground">{host}</p>
+
+          {/* Reason badge */}
+          <div className="mb-6 inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="truncate max-w-[260px]" title={reason}>{reason}</span>
+          </div>
+
+          <p className="mb-8 text-xs text-muted-foreground/70 leading-relaxed max-w-sm mx-auto">
+            {isCspBlock
+              ? "This site has configured its server to block embedding in iframes. This is a security policy set by the site owner and cannot be bypassed."
+              : "This site has restricted embedding inside frames. Open it in a new tab to view the full page."}
+          </p>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              id="external-viewer-open-new-tab"
+            >
+              <ArrowUpRight className="h-4 w-4" />
+              Open in new tab
+            </a>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-5 py-3 text-sm font-medium text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                id="external-viewer-retry"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Try anyway
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Text */}
-        <h2 className="mb-2 text-xl font-bold font-display">
-          {title || host}
-        </h2>
-        <p className="mb-1 text-sm font-medium text-muted-foreground">{host}</p>
-        <p className="mb-8 text-xs text-muted-foreground/70 leading-relaxed max-w-sm mx-auto">
-          This site has restricted embedding inside frames ({reason}). Open it
-          in a new tab to view the full page.
+        {/* Info note */}
+        <p className="text-center text-[11px] text-muted-foreground/50">
+          Embedding blocked by{" "}
+          <code className="rounded bg-muted px-1 font-mono">
+            {isCspBlock ? "Content-Security-Policy: frame-ancestors" : "X-Frame-Options"}
+          </code>
         </p>
-
-        {/* CTA */}
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          id="external-viewer-open-new-tab"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Open in new tab
-        </a>
       </div>
     </div>
   );
@@ -213,6 +252,7 @@ export function ExternalViewer({
   const [state, setState] = useState<ViewerState>("loading");
   const [blockReason, setBlockReason] = useState("embedding restricted");
   const [checkedEmbeddable, setCheckedEmbeddable] = useState<boolean | null>(null);
+  const [forceLoad, setForceLoad] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -224,6 +264,7 @@ export function ExternalViewer({
     setState("loading");
     setCheckedEmbeddable(null);
     setBlockReason("embedding restricted");
+    setForceLoad(false);
     blankTimerRef.current && clearTimeout(blankTimerRef.current);
   }, [isOpen, url]);
 
@@ -303,6 +344,26 @@ export function ExternalViewer({
     }, BLANK_DETECTION_TIMEOUT_MS);
     setState("loaded");
   }, []);
+
+  // ── Iframe error handler (CSP violations, network errors) ─────────────────
+  const handleIframeError = useCallback(() => {
+    setBlockReason("failed to load (CSP or network error)");
+    setState("blocked");
+  }, []);
+
+  // ── CSP violation listener ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleCspViolation = (e: SecurityPolicyViolationEvent) => {
+      if (e.violatedDirective?.startsWith("frame-src") ||
+          e.violatedDirective?.startsWith("child-src")) {
+        setBlockReason(`CSP frame-src blocked ${e.blockedURI}`);
+        setState("blocked");
+      }
+    };
+    document.addEventListener("securitypolicyviolation", handleCspViolation);
+    return () => document.removeEventListener("securitypolicyviolation", handleCspViolation);
+  }, [isOpen]);
 
   // Cleanup timer on unmount / close
   useEffect(() => {
@@ -421,7 +482,16 @@ export function ExternalViewer({
 
         {/* Blocked fallback */}
         {state === "blocked" && (
-          <BlockedFallback url={url} title={title} reason={blockReason} />
+          <BlockedFallback
+            url={url}
+            title={title}
+            reason={blockReason}
+            onRetry={() => {
+              setForceLoad(true);
+              setState("loading");
+              setCheckedEmbeddable(true);
+            }}
+          />
         )}
 
         {/* iframe — rendered (but hidden) while loading so it can start
@@ -440,6 +510,7 @@ export function ExternalViewer({
             referrerPolicy="no-referrer"
             loading="lazy"
             onLoad={handleIframeLoad}
+            onError={handleIframeError}
           />
         )}
       </div>
