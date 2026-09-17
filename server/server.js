@@ -64,6 +64,7 @@ if (rateLimit) {
 // ─── CORS ─────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   "https://updated-demo.vercel.app",
+  "https://updated-studysync.vercel.app",
   "http://localhost:5173",
   "http://localhost:3000",
 ];
