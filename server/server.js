@@ -67,6 +67,7 @@ const allowedOrigins = [
   "https://updated-studysync.vercel.app",
   "http://localhost:5173",
   "http://localhost:3000",
+  "https://server-production-4f60.up.railway.app",
 ];
 app.use(cors({
   origin: (origin, callback) => {
